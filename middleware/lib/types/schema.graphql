@@ -1,0 +1,579 @@
+# Canonical GraphQL Schema
+# Headless eCommerce Portal - Phase 1 (MVP)
+
+# Scalar Types
+scalar DateTime
+scalar JSON
+scalar URL
+
+# Core Types
+type Money {
+  amount: Float!
+  currency: String!
+  formatted: String!
+}
+
+type PriceRange {
+  min: Money!
+  max: Money!
+}
+
+type Address {
+  id: ID
+  firstName: String!
+  lastName: String!
+  company: String
+  street1: String!
+  street2: String
+  city: String!
+  state: String!
+  postalCode: String!
+  country: String!
+  phone: String
+  isDefaultShipping: Boolean
+  isDefaultBilling: Boolean
+}
+
+type Media {
+  url: URL!
+  alt: String
+  type: String!
+  width: Int
+  height: Int
+  thumbnail: URL
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+  totalCount: Int
+}
+
+input PaginationInput {
+  limit: Int = 20
+  cursor: String
+}
+
+# Catalog Types
+enum ProductType {
+  SIMPLE
+  CONFIGURABLE
+  BUNDLE
+  GROUPED
+  VIRTUAL
+  DOWNLOADABLE
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  BACKORDER
+}
+
+type ProductAttribute {
+  code: String!
+  label: String!
+  value: String!
+}
+
+type ConfigurableOptionValue {
+  id: ID!
+  label: String!
+  code: String!
+  swatch: URL
+}
+
+type ConfigurableOption {
+  id: ID!
+  label: String!
+  code: String!
+  values: [ConfigurableOptionValue!]!
+}
+
+type Product {
+  id: ID!
+  sku: String!
+  name: String!
+  slug: String!
+  description: String
+  shortDescription: String
+  price: Money
+  priceRange: PriceRange
+  specialPrice: Money
+  images: [Media!]!
+  type: ProductType!
+  stockStatus: StockStatus!
+  inStock: Boolean!
+  quantity: Int
+  attributes: [ProductAttribute!]
+  configurableOptions: [ConfigurableOption!]
+  relatedProducts: [Product!]
+  metaTitle: String
+  metaDescription: String
+  canonicalUrl: URL
+}
+
+type ProductVariant {
+  id: ID!
+  sku: String!
+  name: String!
+  price: Money!
+  images: [Media!]!
+  stockStatus: StockStatus!
+  inStock: Boolean!
+  quantity: Int
+  options: [ProductAttribute!]!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  image: Media
+  parentId: ID
+  children: [Category!]
+  breadcrumbs: [Category!]!
+  metaTitle: String
+  metaDescription: String
+  canonicalUrl: URL
+}
+
+type ProductConnection {
+  items: [Product!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+# Cart Types
+type CartItem {
+  id: ID!
+  product: Product!
+  variant: ProductVariant
+  quantity: Int!
+  unitPrice: Money!
+  rowTotal: Money!
+  options: [ProductAttribute!]
+}
+
+type Cart {
+  id: ID!
+  items: [CartItem!]!
+  itemCount: Int!
+  subtotal: Money!
+  discount: Money
+  couponCode: String
+  tax: Money
+  shipping: Money
+  total: Money!
+  shippingMethod: ShippingMethod
+  paymentMethod: PaymentMethod
+}
+
+# Checkout Types
+type ShippingMethod {
+  code: String!
+  name: String!
+  description: String
+  cost: Money!
+  estimatedDelivery: String
+}
+
+type PaymentMethod {
+  code: String!
+  name: String!
+  title: String!
+  available: Boolean!
+  config: JSON
+}
+
+type Checkout {
+  cart: Cart!
+  shippingAddress: Address
+  billingAddress: Address
+  availableShippingMethods: [ShippingMethod!]!
+  selectedShippingMethod: ShippingMethod
+  availablePaymentMethods: [PaymentMethod!]!
+  selectedPaymentMethod: PaymentMethod
+}
+
+# Customer Types
+type Customer {
+  id: ID!
+  email: String!
+  firstName: String!
+  lastName: String!
+  fullName: String!
+  phone: String
+  dateOfBirth: DateTime
+  gender: String
+  defaultShippingAddress: Address
+  defaultBillingAddress: Address
+  addresses: [Address!]!
+  isEmailVerified: Boolean!
+  createdAt: DateTime!
+}
+
+type CustomerAuth {
+  customer: Customer!
+  token: String!
+}
+
+# Order Types
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETE
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderState {
+  NEW
+  PROCESSING
+  COMPLETE
+  CLOSED
+  CANCELED
+  HOLDED
+  PAYMENT_REVIEW
+}
+
+type OrderItem {
+  id: ID!
+  sku: String!
+  name: String!
+  image: Media
+  quantity: Int!
+  unitPrice: Money!
+  rowTotal: Money!
+  options: [ProductAttribute!]
+}
+
+type Order {
+  orderNumber: String!
+  id: ID!
+  status: OrderStatus!
+  state: OrderState!
+  items: [OrderItem!]!
+  subtotal: Money!
+  discount: Money
+  couponCode: String
+  tax: Money
+  shipping: Money
+  total: Money!
+  shippingAddress: Address!
+  billingAddress: Address!
+  shippingMethod: ShippingMethod
+  paymentMethod: PaymentMethod
+  orderDate: DateTime!
+  trackingNumber: String
+  trackingUrl: URL
+}
+
+type OrderConnection {
+  items: [Order!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+# Error Types
+enum ErrorSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+enum ErrorSource {
+  MAGENTO
+  MIDDLEWARE
+}
+
+type NormalizedError {
+  code: String!
+  message: String!
+  severity: ErrorSeverity!
+  httpStatus: Int!
+  retryable: Boolean!
+  path: [String!]
+  source: ErrorSource!
+  details: JSON
+}
+
+# Input Types
+input PriceRangeInput {
+  min: Float!
+  max: Float!
+}
+
+input AttributeFilterInput {
+  code: String!
+  values: [String!]!
+}
+
+input ProductFilters {
+  priceRange: PriceRangeInput
+  attributes: [AttributeFilterInput!]
+  inStock: Boolean
+}
+
+enum ProductSortField {
+  NAME
+  PRICE
+  CREATED_AT
+  RELEVANCE
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+input ProductSort {
+  field: ProductSortField!
+  direction: SortDirection!
+}
+
+input OptionInput {
+  code: String!
+  value: String!
+}
+
+input AddToCartInput {
+  sku: String!
+  quantity: Int! = 1
+  options: [OptionInput!]
+}
+
+input UpdateCartItemInput {
+  itemId: ID!
+  quantity: Int!
+}
+
+input AddressInput {
+  firstName: String!
+  lastName: String!
+  company: String
+  street1: String!
+  street2: String
+  city: String!
+  state: String!
+  postalCode: String!
+  country: String!
+  phone: String
+  isDefaultShipping: Boolean
+  isDefaultBilling: Boolean
+}
+
+input PlaceOrderInput {
+  agreeToTerms: Boolean!
+  comments: String
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  firstName: String!
+  lastName: String!
+  phone: String
+}
+
+input UpdateProfileInput {
+  firstName: String
+  lastName: String
+  phone: String
+  dateOfBirth: DateTime
+  gender: String
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+  confirmPassword: String!
+}
+
+input ResetPasswordInput {
+  email: String!
+  resetToken: String!
+  newPassword: String!
+  confirmPassword: String!
+}
+
+# Payload Types
+type AddToCartPayload {
+  cart: Cart
+  errors: [NormalizedError!]
+}
+
+type UpdateCartItemPayload {
+  cart: Cart
+  errors: [NormalizedError!]
+}
+
+type RemoveCartItemPayload {
+  cart: Cart
+  errors: [NormalizedError!]
+}
+
+type ApplyCouponPayload {
+  cart: Cart
+  errors: [NormalizedError!]
+}
+
+type RemoveCouponPayload {
+  cart: Cart
+  errors: [NormalizedError!]
+}
+
+type SetShippingAddressPayload {
+  checkout: Checkout
+  errors: [NormalizedError!]
+}
+
+type SetBillingAddressPayload {
+  checkout: Checkout
+  errors: [NormalizedError!]
+}
+
+type SetShippingMethodPayload {
+  checkout: Checkout
+  errors: [NormalizedError!]
+}
+
+type SetPaymentMethodPayload {
+  checkout: Checkout
+  errors: [NormalizedError!]
+}
+
+type PlaceOrderPayload {
+  order: Order
+  errors: [NormalizedError!]
+}
+
+type RegisterPayload {
+  customer: CustomerAuth
+  errors: [NormalizedError!]
+}
+
+type LoginPayload {
+  customer: CustomerAuth
+  errors: [NormalizedError!]
+}
+
+type LogoutPayload {
+  success: Boolean!
+  errors: [NormalizedError!]
+}
+
+type RequestPasswordResetPayload {
+  success: Boolean!
+  errors: [NormalizedError!]
+}
+
+type ResetPasswordPayload {
+  success: Boolean!
+  errors: [NormalizedError!]
+}
+
+type UpdateProfilePayload {
+  customer: Customer
+  errors: [NormalizedError!]
+}
+
+type ChangePasswordPayload {
+  success: Boolean!
+  errors: [NormalizedError!]
+}
+
+type AddAddressPayload {
+  address: Address
+  errors: [NormalizedError!]
+}
+
+type UpdateAddressPayload {
+  address: Address
+  errors: [NormalizedError!]
+}
+
+type DeleteAddressPayload {
+  success: Boolean!
+  errors: [NormalizedError!]
+}
+
+type SetDefaultShippingAddressPayload {
+  customer: Customer
+  errors: [NormalizedError!]
+}
+
+type SetDefaultBillingAddressPayload {
+  customer: Customer
+  errors: [NormalizedError!]
+}
+
+# Queries
+type Query {
+  # Catalog Queries
+  product(slug: String!): Product
+  productsByCategory(
+    categorySlug: String!
+    pagination: PaginationInput
+    filters: ProductFilters
+    sort: ProductSort
+  ): ProductConnection!
+  categories(parentId: ID): [Category!]!
+  category(slug: String!): Category
+  searchProducts(
+    query: String!
+    pagination: PaginationInput
+    filters: ProductFilters
+    sort: ProductSort
+  ): ProductConnection!
+  
+  # Cart Queries
+  cart: Cart
+  
+  # Customer Queries
+  customer: Customer
+  customerOrders(pagination: PaginationInput): OrderConnection!
+  order(orderNumber: String!): Order
+  
+  # Checkout Queries
+  checkout: Checkout
+}
+
+# Mutations
+type Mutation {
+  # Cart Mutations
+  addToCart(input: AddToCartInput!): AddToCartPayload!
+  updateCartItem(input: UpdateCartItemInput!): UpdateCartItemPayload!
+  removeCartItem(itemId: ID!): RemoveCartItemPayload!
+  applyCoupon(couponCode: String!): ApplyCouponPayload!
+  removeCoupon: RemoveCouponPayload!
+  
+  # Checkout Mutations
+  setShippingAddress(input: AddressInput!): SetShippingAddressPayload!
+  setBillingAddress(input: AddressInput!): SetBillingAddressPayload!
+  setShippingMethod(shippingMethodCode: String!): SetShippingMethodPayload!
+  setPaymentMethod(paymentMethodCode: String!): SetPaymentMethodPayload!
+  placeOrder(input: PlaceOrderInput!): PlaceOrderPayload!
+  
+  # Customer Authentication Mutations
+  register(input: RegisterInput!): RegisterPayload!
+  login(email: String!, password: String!): LoginPayload!
+  logout: LogoutPayload!
+  requestPasswordReset(email: String!): RequestPasswordResetPayload!
+  resetPassword(input: ResetPasswordInput!): ResetPasswordPayload!
+  
+  # Customer Profile Mutations
+  updateProfile(input: UpdateProfileInput!): UpdateProfilePayload!
+  changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
+  addAddress(input: AddressInput!): AddAddressPayload!
+  updateAddress(id: ID!, input: AddressInput!): UpdateAddressPayload!
+  deleteAddress(id: ID!): DeleteAddressPayload!
+  setDefaultShippingAddress(id: ID!): SetDefaultShippingAddressPayload!
+  setDefaultBillingAddress(id: ID!): SetDefaultBillingAddressPayload!
+}
+
