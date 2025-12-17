@@ -2,101 +2,145 @@
 
 Production-grade headless eCommerce portal built with Next.js (App Router), TypeScript, and Magento 2.
 
+## 🚀 Quick Start with Docker
+
+Deploy the complete stack in minutes:
+
+```bash
+# Clone the repository
+git clone https://github.com/abhishekaxl/headlessEcommerce.git
+cd headlessEcommerce
+
+# Start all services
+cd docker
+docker-compose up -d
+```
+
+**Access:**
+- 🛒 **Storefront**: http://localhost:3000
+- 🔧 **Magento Admin**: http://localhost:8080/admin (admin / Admin@123)
+- 📧 **Mailhog**: http://localhost:8025
+
+For detailed Docker setup, see [docker/README.md](./docker/README.md)
+
 ## Architecture
 
-- **Frontend**: Next.js 14+ (App Router), React 18+, TypeScript
-- **Middleware**: GraphQL Normalization Gateway (Next.js API Routes)
-- **Backend**: Magento 2 (GraphQL API)
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Headless eCommerce                     │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              Next.js Frontend                     │   │
+│  │         (Atomic Design Pattern)                   │   │
+│  │   atoms → molecules → organisms → templates       │   │
+│  └──────────────────────┬───────────────────────────┘   │
+│                         │                                │
+│  ┌──────────────────────▼───────────────────────────┐   │
+│  │         GraphQL Middleware Layer                  │   │
+│  │    (Normalization, Caching, Error Handling)       │   │
+│  └──────────────────────┬───────────────────────────┘   │
+│                         │                                │
+│  ┌──────────────────────▼───────────────────────────┐   │
+│  │              Magento 2 Backend                    │   │
+│  │         (GraphQL API, MySQL, Redis)               │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Project Structure
 
 ```
-headless-ecommerce-portal/
+headlessEcommerce/
 ├── app/                    # Next.js App Router pages
 │   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Home page
 │   ├── category/[slug]/    # Category pages
 │   ├── product/[slug]/     # Product detail pages
+│   ├── shop/               # Shop listing page
 │   ├── cart/               # Cart page
 │   ├── checkout/           # Checkout page
-│   ├── account/            # Account pages
-│   └── search/             # Search results
-├── components/             # React components
-│   ├── catalog/            # Catalog components
-│   ├── cart/               # Cart components
-│   ├── checkout/           # Checkout components
-│   └── account/            # Account components
+│   └── account/            # Account pages
+├── components/             # React components (Atomic Design)
+│   ├── atoms/              # Basic UI elements (Button, Input, Text, Icon)
+│   ├── molecules/          # Combinations (ProductCard, NavLink, SearchBar)
+│   ├── organisms/          # Complex sections (Header, Footer, ProductGrid)
+│   └── templates/          # Page layouts (MainLayout, ShopLayout)
 ├── lib/                    # Utilities and helpers
 │   └── graphql/            # GraphQL client, queries, mutations
 ├── middleware/             # GraphQL Normalization Gateway
-│   └── lib/                # Middleware logic
-├── api/                    # API routes
-│   └── graphql/            # GraphQL endpoint
+├── docker/                 # Docker deployment files
+│   ├── docker-compose.yml  # Complete stack configuration
+│   ├── Dockerfile.frontend # Next.js container
+│   └── README.md           # Docker deployment guide
 └── docs/                   # Documentation
 ```
 
-## Getting Started
+## Features
+
+### Frontend
+- ✅ **Atomic Design Pattern** - Scalable component architecture
+- ✅ **Megamenu Navigation** - 3-level expandable category menu
+- ✅ **Product Catalog** - Categories, products, search
+- ✅ **Shopping Cart** - Guest and logged-in cart
+- ✅ **Checkout Flow** - Multi-step checkout process
+- ✅ **Customer Account** - Login, register, dashboard
+- ✅ **Responsive Design** - Mobile-first approach
+
+### Architecture
+- ✅ **3-Layer Architecture** - Frontend, Middleware, Backend
+- ✅ **Canonical GraphQL API** - Unified API layer
+- ✅ **Server-Side Rendering** - SEO optimized
+- ✅ **Type-Safe** - Full TypeScript support
+
+## Manual Installation
 
 ### Prerequisites
-
 - Node.js 18+
 - npm or yarn
-- Docker Desktop (or Docker Engine + Docker Compose)
-- Magento 2 instance with GraphQL API (see [Magento 2 Setup](#magento-2-setup) below)
+- Docker Desktop (for Magento)
 
-### Installation
+### Steps
 
 ```bash
-# Install dependencies
+# 1. Clone repository
+git clone https://github.com/abhishekaxl/headlessEcommerce.git
+cd headlessEcommerce
+
+# 2. Install dependencies
 npm install
 
-# Install middleware dependencies
-cd middleware
-npm install
+# 3. Create environment file
+cp docker/env.example .env.local
+
+# 4. Start Magento (Docker)
+cd docker
+docker-compose up -d magento mysql elasticsearch redis
+
+# 5. Start Next.js development server
 cd ..
+npm run dev
 ```
-
-### Magento 2 Setup
-
-**Quick Setup with Docker:**
-
-1. Navigate to Magento 2 directory:
-   ```bash
-   cd magento2
-   ```
-
-2. Follow the setup instructions in `magento2/README.md` or `magento2/QUICKSTART.md`
-
-3. After installation, Magento will be available at:
-   - Frontend: http://localhost
-   - Admin: http://localhost/admin
-   - GraphQL: http://localhost/graphql
-
-**For detailed instructions, see:** [magento2/README.md](./magento2/README.md)
 
 ### Environment Variables
 
-Create a `.env.local` file in the project root:
+Create `.env.local` in project root:
 
 ```bash
-# Magento Configuration (use localhost if using Docker setup)
-MAGENTO_GRAPHQL_URL=http://localhost/graphql
+# Magento Configuration
+MAGENTO_GRAPHQL_URL=http://localhost:8080/graphql
 MAGENTO_STORE_CODE=default
-DEFAULT_LOCALE=en_US
-DEFAULT_CURRENCY=USD
 
-# GraphQL Endpoint
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:3000
 NEXT_PUBLIC_GRAPHQL_ENDPOINT=/api/graphql
-
-# Middleware Configuration
-CACHE_ENABLED=true
-RATE_LIMIT_ENABLED=true
 ```
 
-### Development
+## Development
 
 ```bash
-# Run development server
+# Development server
 npm run dev
 
 # Type check
@@ -104,56 +148,62 @@ npm run type-check
 
 # Lint
 npm run lint
-```
 
-### Build
-
-```bash
-# Build for production
+# Build
 npm run build
 
-# Start production server
+# Production
 npm start
 ```
 
-## Features
+## Component Usage (Atomic Design)
 
-### Phase 1 (MVP)
+```tsx
+// Import atoms
+import { Button, Text, Icon } from '@/components/atoms';
 
-- ✅ Catalog browsing (categories, products)
-- ✅ Product detail pages
-- ✅ Search functionality
-- ✅ Shopping cart (guest and logged-in)
-- ✅ Checkout flow
-- ✅ Customer account management
-- ✅ Order history
+// Import molecules
+import { ProductCard, NavLink } from '@/components/molecules';
 
-### Architecture Features
+// Import organisms
+import { Header, Footer, ProductGrid } from '@/components/organisms';
 
-- ✅ 3-layer architecture (Frontend, Middleware, Magento)
-- ✅ Canonical GraphQL API
-- ✅ Error normalization
-- ✅ Type-safe operations
-- ✅ Server-side rendering (SSR)
-- ✅ Incremental Static Regeneration (ISR)
+// Import templates
+import { MainLayout, ShopLayout } from '@/components/templates';
+```
 
 ## Documentation
 
-### Project Documentation
+- [Docker Deployment Guide](./docker/README.md)
+- [Architecture Blueprint](./docs/02-architecture-blueprint.md)
+- [GraphQL Schema](./docs/03-canonical-graphql-schema.md)
+- [Test Strategy](./docs/06-test-strategy.md)
 
-See `/docs` directory for detailed documentation:
+## Tech Stack
 
-- `01-requirements-breakdown.md` - Requirements and user stories
-- `02-architecture-blueprint.md` - Architecture design
-- `03-canonical-graphql-schema.md` - GraphQL schema documentation
-- `06-test-strategy.md` - Testing strategy and guidelines
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, React 18, TypeScript |
+| Styling | CSS Variables, styled-jsx |
+| Backend | Magento 2.4.7, GraphQL |
+| Database | MySQL 8.0 |
+| Search | Elasticsearch 7.17 |
+| Cache | Redis 7 |
+| Container | Docker, Docker Compose |
 
-### Magento 2 Documentation
+## Contributing
 
-- `magento2/README.md` - Complete Magento 2 Docker setup guide
-- `magento2/QUICKSTART.md` - Quick start guide for Magento 2
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 MIT
 
+## Support
+
+For issues, create a GitHub issue at:
+https://github.com/abhishekaxl/headlessEcommerce/issues

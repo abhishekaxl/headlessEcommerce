@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Magento 2 Backend
+  magento:
+    image: bitnami/magento:2.4.7
+    container_name: headless-magento
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - MAGENTO_HOST=localhost
+      - MAGENTO_DATABASE_HOST=mysql
+      - MAGENTO_DATABASE_PORT_NUMBER=3306
+      - MAGENTO_DATABASE_USER=magento
+      - MAGENTO_DATABASE_PASSWORD=magento123
+      - MAGENTO_DATABASE_NAME=magento
+      - MAGENTO_USERNAME=admin
+      - MAGENTO_PASSWORD=Admin@123
+      - MAGENTO_EMAIL=admin@example.com
+      - MAGENTO_FIRST_NAME=Admin
+      - MAGENTO_LAST_NAME=User
+      - MAGENTO_MODE=developer
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT_NUMBER=9200
+      - MAGENTO_ENABLE_HTTPS=no
+      - MAGENTO_SKIP_REINDEX=no
+      - MAGENTO_SKIP_BOOTSTRAP=no
+    volumes:
+      - magento_data:/bitnami/magento
+    depends_on:
+      - mysql
+      - elasticsearch
+      - redis
+    networks:
+      - headless-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: headless-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=magento
+      - MYSQL_USER=magento
+      - MYSQL_PASSWORD=magento123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - headless-network
+
+  # Elasticsearch (required for Magento 2.4+)
+  elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: headless-elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - headless-network
+
+  # Redis (for cache and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: headless-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - headless-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: headless-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_MAGENTO_URL=http://magento:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - magento
+    networks:
+      - headless-network
+
+  # Mailhog (for email testing)
+  mailhog:
+    image: mailhog/mailhog
+    container_name: headless-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - headless-network
+
+volumes:
+  magento_data:
+  mysql_data:
+  elasticsearch_data:
+  redis_data:
+
+networks:
+  headless-network:
+    driver: bridge
+
