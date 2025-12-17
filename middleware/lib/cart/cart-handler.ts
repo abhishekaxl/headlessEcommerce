@@ -4,6 +4,7 @@
  */
 
 import { RequestContext } from '../types';
+import { executeMagentoGraphQL } from '../magento/client';
 
 export interface CartMergeResult {
   merged: boolean;
@@ -50,8 +51,30 @@ export async function getOrCreateCartToken(
 ): Promise<string | undefined> {
   // If customer is logged in, use customer cart
   if (context.customerToken) {
-    // TODO: Get customer cart token from Magento
-    return context.cartToken;
+    if (context.cartToken) return context.cartToken;
+
+    // Magento: customerCart returns the active cart id for authenticated users
+    const result = await executeMagentoGraphQL<{ customerCart?: { id?: string } }>(
+      {
+        query: `
+          query CustomerCart {
+            customerCart {
+              id
+            }
+          }
+        `,
+        operationName: 'CustomerCart',
+      },
+      context
+    );
+
+    const cartId = result.data?.customerCart?.id;
+    if (cartId) {
+      context.cartToken = cartId;
+      return cartId;
+    }
+
+    return undefined;
   }
 
   // For guest users, use or create guest cart token
@@ -59,8 +82,25 @@ export async function getOrCreateCartToken(
     return context.cartToken;
   }
 
-  // TODO: Create new guest cart in Magento and get token
-  // For now, return undefined (will be handled by Magento)
+  // Magento: createEmptyCart returns a new guest cart id
+  const result = await executeMagentoGraphQL<{ createEmptyCart?: string }>(
+    {
+      query: `
+        mutation CreateEmptyCart {
+          createEmptyCart
+        }
+      `,
+      operationName: 'CreateEmptyCart',
+    },
+    context
+  );
+
+  const cartId = result.data?.createEmptyCart;
+  if (cartId) {
+    context.cartToken = cartId;
+    return cartId;
+  }
+
   return undefined;
 }
 

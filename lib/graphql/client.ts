@@ -38,20 +38,47 @@ export async function executeGraphQL<T = unknown>(
   try {
     const endpoint = getGraphQLEndpoint();
     console.log(`[GraphQL Client] Making request to: ${endpoint}`);
-    
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      // Store context headers
+      'X-Store-Code': 'default',
+      'X-Locale': 'en_US',
+      'X-Currency': 'USD',
+    };
+
+    // IMPORTANT: Forward cookies in SSR so cart/customer state works on server-rendered pages
+    if (typeof window === 'undefined') {
+      try {
+        const { cookies } = await import('next/headers');
+        const cookieStore = cookies();
+        const cookieHeader = cookieStore
+          .getAll()
+          .map((c) => `${c.name}=${encodeURIComponent(c.value)}`)
+          .join('; ');
+        if (cookieHeader) {
+          headers.cookie = cookieHeader;
+        }
+      } catch (e) {
+        console.warn('[GraphQL Client] Could not read cookies for SSR forwarding:', e);
+      }
+    }
+
+    const cacheableOps = new Set([
+      'GetProduct',
+      'GetCategory',
+      'GetCategories',
+      'ProductsByCategory',
+      'SearchProducts',
+    ]);
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add store context headers if needed
-        'X-Store-Code': 'default',
-        'X-Locale': 'en_US',
-        'X-Currency': 'USD',
-      },
+      headers,
       body: JSON.stringify(request),
       // Cache configuration for server components
-      ...(typeof window === 'undefined' && request.operationName?.startsWith('Get')
-        ? { next: { revalidate: 60 } } // Revalidate every minute for queries (server-side only)
+      ...(typeof window === 'undefined' && request.operationName && cacheableOps.has(request.operationName)
+        ? { next: { revalidate: 60 } } // Only cache public catalog queries
         : {}), // No cache config for client-side or mutations
     });
 

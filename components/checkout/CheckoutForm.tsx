@@ -31,6 +31,15 @@ export function CheckoutForm() {
   const [error, setError] = useState('');
   const [cart, setCart] = useState<Cart | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [email, setEmail] = useState<string>('');
+
+  // Magento-aligned checkout data (with fallback to dummy methods)
+  const [availableShippingMethods, setAvailableShippingMethods] = useState<
+    Array<{ code: string; name: string; description?: string | null; cost: { amount: number; currency: string; formatted: string } }>
+  >([]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<
+    Array<{ code: string; title: string; name: string; available: boolean }>
+  >([]);
 
   const [shippingAddress, setShippingAddress] = useState<Address>({
     firstName: '',
@@ -71,14 +80,47 @@ export function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `query GetCart { cart { id items { id product { id sku name slug images { url alt } } quantity unitPrice { amount currency formatted } rowTotal { amount currency formatted } } itemCount subtotal { amount currency formatted } total { amount currency formatted } } }`,
-          operationName: 'GetCart',
+          query: `
+            query GetCheckout {
+              checkout {
+                cart {
+                  id
+                  items {
+                    id
+                    product { id sku name slug images { url alt } }
+                    quantity
+                    unitPrice { amount currency formatted }
+                    rowTotal { amount currency formatted }
+                  }
+                  itemCount
+                  subtotal { amount currency formatted }
+                  total { amount currency formatted }
+                }
+                availableShippingMethods { code name description cost { amount currency formatted } }
+                selectedShippingMethod { code name description cost { amount currency formatted } }
+                availablePaymentMethods { code title name available }
+                selectedPaymentMethod { code title name available }
+              }
+            }
+          `,
+          operationName: 'GetCheckout',
         }),
       });
       const result = await response.json();
-      if (result.data?.cart) {
-        setCart(result.data.cart);
+      if (result.data?.checkout?.cart) {
+        setCart(result.data.checkout.cart);
       }
+
+      const ship = result.data?.checkout?.availableShippingMethods || [];
+      const pay = result.data?.checkout?.availablePaymentMethods || [];
+      setAvailableShippingMethods(ship);
+      setAvailablePaymentMethods(pay);
+
+      const selectedShip = result.data?.checkout?.selectedShippingMethod?.code;
+      if (selectedShip) setSelectedShipping(selectedShip);
+
+      const selectedPay = result.data?.checkout?.selectedPaymentMethod?.code;
+      if (selectedPay) setPaymentMethod(selectedPay);
     } catch (err) {
       console.error('Error fetching cart:', err);
     }
@@ -90,12 +132,24 @@ export function CheckoutForm() {
     setLoading(true);
 
     try {
+      if (!email.trim()) {
+        setError('Email is required');
+        return;
+      }
+
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation SetShippingAddress($input: ShippingAddressInput!) { setShippingAddress(input: $input) { cart { id } } }`,
-          variables: { input: { address: shippingAddress } },
+          query: `
+            mutation SetShippingAddress($input: AddressInput!, $email: String!) {
+              setShippingAddress(input: $input) {
+                checkout { cart { id } }
+                errors { message }
+              }
+            }
+          `,
+          variables: { input: shippingAddress, email },
           operationName: 'SetShippingAddress',
         }),
       });
@@ -109,6 +163,25 @@ export function CheckoutForm() {
       if (sameAsShipping) {
         setBillingAddress({ ...shippingAddress });
       }
+
+      // Magento flow: after shipping address, set shipping method
+      await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            mutation SetShippingMethod($shippingMethodCode: String!) {
+              setShippingMethod(shippingMethodCode: $shippingMethodCode) {
+                checkout { cart { id } }
+                errors { message }
+              }
+            }
+          `,
+          variables: { shippingMethodCode: selectedShipping },
+          operationName: 'SetShippingMethod',
+        }),
+      });
+
       setCurrentStep('billing');
     } catch (err) {
       setError('Failed to save shipping address');
@@ -129,8 +202,15 @@ export function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation SetBillingAddress($input: BillingAddressInput!) { setBillingAddress(input: $input) { cart { id } } }`,
-          variables: { input: { address } },
+          query: `
+            mutation SetBillingAddress($input: AddressInput!) {
+              setBillingAddress(input: $input) {
+                checkout { cart { id } }
+                errors { message }
+              }
+            }
+          `,
+          variables: { input: address },
           operationName: 'SetBillingAddress',
         }),
       });
@@ -140,17 +220,6 @@ export function CheckoutForm() {
         setError(result.errors[0].message);
         return;
       }
-      
-      // Set shipping method
-      await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `mutation SetShippingMethod($input: ShippingMethodInput!) { setShippingMethod(input: $input) { cart { id } } }`,
-          variables: { input: { carrierCode: selectedShipping.split('_')[0], methodCode: selectedShipping.split('_')[1] } },
-          operationName: 'SetShippingMethod',
-        }),
-      });
       
       setCurrentStep('payment');
     } catch (err) {
@@ -170,8 +239,15 @@ export function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation SetPaymentMethod($input: PaymentMethodInput!) { setPaymentMethod(input: $input) { cart { id } } }`,
-          variables: { input: { code: paymentMethod } },
+          query: `
+            mutation SetPaymentMethod($paymentMethodCode: String!) {
+              setPaymentMethod(paymentMethodCode: $paymentMethodCode) {
+                checkout { cart { id } }
+                errors { message }
+              }
+            }
+          `,
+          variables: { paymentMethodCode: paymentMethod },
           operationName: 'SetPaymentMethod',
         }),
       });
@@ -199,7 +275,15 @@ export function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation PlaceOrder { placeOrder { order { orderNumber } } }`,
+          query: `
+            mutation PlaceOrder($input: PlaceOrderInput!) {
+              placeOrder(input: $input) {
+                order { orderNumber }
+                errors { message }
+              }
+            }
+          `,
+          variables: { input: { agreeToTerms: true } },
           operationName: 'PlaceOrder',
         }),
       });
@@ -228,6 +312,24 @@ export function CheckoutForm() {
   ];
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+
+  const shippingOptions: ShippingMethod[] =
+    availableShippingMethods.length > 0
+      ? availableShippingMethods.map((m) => ({
+          code: m.code,
+          title: m.name,
+          price: m.cost.amount,
+          carrier: m.description || m.name,
+        }))
+      : SHIPPING_METHODS;
+
+  const paymentOptions: Array<{ code: string; title: string }> =
+    availablePaymentMethods.length > 0
+      ? availablePaymentMethods.map((m) => ({ code: m.code, title: m.title }))
+      : [
+          { code: 'checkmo', title: 'Check / Money Order' },
+          { code: 'cashondelivery', title: 'Cash on Delivery' },
+        ];
 
   // Order confirmation
   if (orderNumber) {
@@ -385,6 +487,16 @@ export function CheckoutForm() {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                   <input
                     type="tel"
@@ -398,7 +510,7 @@ export function CheckoutForm() {
                 <div className="pt-4">
                   <h3 className="font-medium text-gray-900 mb-3">Shipping Method</h3>
                   <div className="space-y-2">
-                    {SHIPPING_METHODS.map((method) => (
+                    {shippingOptions.map((method) => (
                       <label
                         key={method.code}
                         className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${
@@ -550,47 +662,29 @@ export function CheckoutForm() {
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Payment Method</h2>
               <form onSubmit={handlePaymentSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label
-                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'checkmo'
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="checkmo"
-                      checked={paymentMethod === 'checkmo'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                    />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900">Check / Money Order</p>
-                      <p className="text-sm text-gray-500">Pay by check or money order</p>
-                    </div>
-                  </label>
-
-                  <label
-                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'cashondelivery'
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="cashondelivery"
-                      checked={paymentMethod === 'cashondelivery'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                    />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900">Cash on Delivery</p>
-                      <p className="text-sm text-gray-500">Pay when you receive your order</p>
-                    </div>
-                  </label>
+                  {paymentOptions.map((pm) => (
+                    <label
+                      key={pm.code}
+                      className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                        paymentMethod === pm.code
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={pm.code}
+                        checked={paymentMethod === pm.code}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                      />
+                      <div className="ml-3">
+                        <p className="font-medium text-gray-900">{pm.title}</p>
+                        <p className="text-sm text-gray-500">Pay using {pm.title}</p>
+                      </div>
+                    </label>
+                  ))}
                 </div>
 
                 <div className="flex gap-4 pt-4">
@@ -649,15 +743,15 @@ export function CheckoutForm() {
                 <div className="border-t pt-4">
                   <h3 className="font-medium text-gray-900 mb-2">Shipping Method</h3>
                   <p className="text-sm text-gray-600">
-                    {SHIPPING_METHODS.find(m => m.code === selectedShipping)?.title} - 
-                    {SHIPPING_METHODS.find(m => m.code === selectedShipping)?.carrier}
+                    {shippingOptions.find(m => m.code === selectedShipping)?.title} - 
+                    {shippingOptions.find(m => m.code === selectedShipping)?.carrier}
                   </p>
                 </div>
 
                 <div className="border-t pt-4">
                   <h3 className="font-medium text-gray-900 mb-2">Payment Method</h3>
                   <p className="text-sm text-gray-600">
-                    {paymentMethod === 'checkmo' ? 'Check / Money Order' : 'Cash on Delivery'}
+                    {paymentOptions.find((p) => p.code === paymentMethod)?.title || paymentMethod}
                   </p>
                 </div>
               </div>
@@ -724,9 +818,9 @@ export function CheckoutForm() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping</span>
                     <span className="text-gray-900">
-                      {SHIPPING_METHODS.find(m => m.code === selectedShipping)?.price === 0
+                      {shippingOptions.find(m => m.code === selectedShipping)?.price === 0
                         ? 'Free'
-                        : `$${SHIPPING_METHODS.find(m => m.code === selectedShipping)?.price.toFixed(2)}`}
+                        : `$${shippingOptions.find(m => m.code === selectedShipping)?.price.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-lg font-semibold pt-2 border-t">

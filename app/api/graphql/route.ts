@@ -227,8 +227,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Ensure cart token for cart operations
-    if (operationName.startsWith('AddToCart') || operationName.startsWith('GetCart')) {
+    // Ensure cart token for cart + checkout operations
+    const cartOps = new Set([
+      'GetCart',
+      'AddToCart',
+      'UpdateCartItem',
+      'RemoveCartItem',
+      'ApplyCoupon',
+      'RemoveCoupon',
+      'GetCheckout',
+      'SetShippingAddress',
+      'SetBillingAddress',
+      'SetShippingMethod',
+      'SetPaymentMethod',
+      'PlaceOrder',
+    ]);
+    if (cartOps.has(operationName)) {
       context.cartToken = await ensureCartToken(context);
     }
 
@@ -538,13 +552,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Always return JSON, even if there are errors
-    return NextResponse.json(response, {
+    const nextRes = NextResponse.json(response, {
       status: magentoResult.errors && magentoResult.errors.length > 0 ? 200 : 200,
       headers: {
         ...Object.fromEntries(responseHeaders.entries()),
         'Content-Type': 'application/json',
       },
     });
+
+    // Persist cart token for guest carts
+    if (context.cartToken) {
+      nextRes.cookies.set('cart-token', context.cartToken, {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
+
+    return nextRes;
   } catch (error) {
     console.error('GraphQL API error:', error);
 

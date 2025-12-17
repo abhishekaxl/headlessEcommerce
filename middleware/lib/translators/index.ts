@@ -5,6 +5,7 @@
 
 import { BaseTranslator } from './base-translator';
 import { CatalogTranslator } from './catalog-translator';
+import { CartTranslator } from './cart-translator';
 
 const translators: Record<string, BaseTranslator> = {
   // Catalog operations
@@ -14,11 +15,19 @@ const translators: Record<string, BaseTranslator> = {
   ProductsByCategory: new CatalogTranslator(),
   SearchProducts: new CatalogTranslator(),
 
-  // TODO: Add other translators
-  // CartTranslator
-  // CheckoutTranslator
-  // CustomerTranslator
-  // OrderTranslator
+  // Cart + Checkout operations
+  GetCart: new CartTranslator(),
+  AddToCart: new CartTranslator(),
+  UpdateCartItem: new CartTranslator(),
+  RemoveCartItem: new CartTranslator(),
+  ApplyCoupon: new CartTranslator(),
+  RemoveCoupon: new CartTranslator(),
+  GetCheckout: new CartTranslator(),
+  SetShippingAddress: new CartTranslator(),
+  SetBillingAddress: new CartTranslator(),
+  SetShippingMethod: new CartTranslator(),
+  SetPaymentMethod: new CartTranslator(),
+  PlaceOrder: new CartTranslator(),
 };
 
 /**

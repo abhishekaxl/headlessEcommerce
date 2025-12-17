@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
+import { useRouter } from 'next/navigation';
+import { addToCart } from '@/lib/graphql/mutations';
 
 interface Product {
   id: string;
@@ -27,14 +29,31 @@ interface ProductCardProps {
 const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"%3E%3Crect fill="%23f5f3ee" width="300" height="300"/%3E%3Ctext fill="%239a9a9a" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
   const imageUrl = product.images?.[0]?.url || PLACEHOLDER;
   const rating = product.rating || 4.5;
   const fullStars = Math.floor(rating);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onAddToCart?.(product);
+    if (!product.inStock || adding) return;
+
+    try {
+      setAdding(true);
+      if (onAddToCart) {
+        onAddToCart(product);
+      } else {
+        await addToCart(product.sku, 1);
+        router.push('/cart');
+        router.refresh();
+      }
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
@@ -81,9 +100,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
           <button
             className="add-to-cart-btn"
             onClick={handleAddToCart}
-            disabled={!product.inStock}
+            disabled={!product.inStock || adding}
           >
-            Add to cart
+            {adding ? 'Adding...' : 'Add to cart'}
           </button>
         </div>
       </Link>
