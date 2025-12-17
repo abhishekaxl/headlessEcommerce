@@ -24,16 +24,16 @@
 
 ## Architecture Overview
 
-यह headless eCommerce portal एक **3-layer architecture** follow करता है जहां:
+This headless eCommerce portal follows a **3-layer architecture** where:
 
-1. **Frontend Layer (Next.js Storefront)** - User interface और UX
-2. **Middleware Layer (GraphQL Normalization Gateway)** - Translation और normalization
+1. **Frontend Layer (Next.js Storefront)** - User interface and UX
+2. **Middleware Layer (GraphQL Normalization Gateway)** - Translation and normalization
 3. **Backend Layer (Magento 2)** - System of record
 
 **Key Principles:**
-- Frontend कभी भी Magento को directly call नहीं करता
-- सभी communication canonical GraphQL API के माध्यम से होती है
-- Middleware Magento-specific details को frontend से hide करता है
+- Frontend never calls Magento directly
+- All communication happens through the canonical GraphQL API
+- Middleware hides Magento-specific details from the frontend
 - Type-safe operations end-to-end
 
 ---
@@ -47,10 +47,10 @@
 
 **Responsibilities:**
 - UI rendering (Server Components + Client Components)
-- Routing और navigation
+- Routing and navigation
 - SEO optimization (SSR, ISR, meta tags)
-- User experience और interactions
-- Form handling और validation (client-side)
+- User experience and interactions
+- Form handling and validation (client-side)
 - State management (React Context, Server State)
 - Image optimization
 - Accessibility compliance
@@ -92,12 +92,12 @@
 
 **Responsibilities:**
 - Canonical GraphQL API exposure
-- Operation registry और whitelisting
-- Request validation और sanitization
+- Operation registry and whitelisting
+- Request validation and sanitization
 - Magento GraphQL translation
 - Response normalization
 - Error normalization
-- Authentication और session management
+- Authentication and session management
 - Cart merge logic
 - Caching strategy implementation
 - Rate limiting
@@ -1371,7 +1371,7 @@ User Action: Click "Add to Cart"
 
 ## Summary
 
-यह architecture blueprint एक production-ready headless eCommerce portal के लिए complete design provide करता है:
+This architecture blueprint provides a complete design for a production-ready headless eCommerce portal:
 
 1. **3-Layer Architecture**: Clear separation of concerns
 2. **Component Interactions**: Detailed flow diagrams
@@ -1382,7 +1382,7 @@ User Action: Click "Add to Cart"
 7. **Deployment**: Vercel-optimized
 8. **Extension Points**: Phase 2 ready
 
-सभी components canonical GraphQL API के माध्यम से communicate करते हैं, ensuring frontend-Magento isolation.
+All components communicate through the canonical GraphQL API, ensuring frontend-Magento isolation.
 
 ---
 
