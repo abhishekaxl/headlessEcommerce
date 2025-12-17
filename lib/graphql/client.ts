@@ -72,6 +72,9 @@ export async function executeGraphQL<T = unknown>(
       'SearchProducts',
     ]);
 
+    const isServer = typeof window === 'undefined';
+    const isCacheable = !!request.operationName && cacheableOps.has(request.operationName);
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
@@ -79,9 +82,10 @@ export async function executeGraphQL<T = unknown>(
       credentials: 'include',
       body: JSON.stringify(request),
       // Cache configuration for server components
-      ...(typeof window === 'undefined' && request.operationName && cacheableOps.has(request.operationName)
+      ...(isServer && isCacheable
         ? { next: { revalidate: 60 } } // Only cache public catalog queries
         : {}), // No cache config for client-side or mutations
+      ...(isServer && !isCacheable ? { cache: 'no-store' } : {}),
     });
 
     console.log(`[GraphQL Client] Response status: ${response.status} ${response.statusText}`);

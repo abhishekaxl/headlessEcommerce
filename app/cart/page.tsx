@@ -11,6 +11,9 @@ import { ProceedToCheckoutButton } from '@/components/cart/ProceedToCheckoutButt
 import Link from 'next/link';
 import styles from './cart.module.css';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function CartPage() {
   const cart = await getCart();
 
