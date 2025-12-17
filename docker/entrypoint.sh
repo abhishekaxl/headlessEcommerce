@@ -90,6 +90,10 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
         --elasticsearch-port="$ES_PORT" \
         --backend-frontname=admin
     
+    # Set developer mode (allows automatic static content generation)
+    echo "Setting developer mode..."
+    bin/magento deploy:mode:set developer
+    
     # Disable 2FA
     echo "Disabling 2FA for development..."
     bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth
@@ -116,6 +120,12 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
         echo "Warning: Sample data installation had issues, continuing anyway..."
     fi
     
+    # Deploy static content for CSS/JS
+    echo ""
+    echo "Deploying static content (CSS/JS)..."
+    bin/magento setup:static-content:deploy -f en_US
+    bin/magento cache:flush
+    
     # Set permissions
     echo "Setting permissions..."
     find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} + 2>/dev/null || true
@@ -134,8 +144,27 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
     echo "Password: ${MAGENTO_ADMIN_PASSWORD:-Admin@123}"
     echo ""
 else
-    echo "Magento already installed, skipping installation."
+    echo "Magento already installed."
+    cd /var/www/html
+    
+    # Ensure developer mode is set
+    CURRENT_MODE=$(bin/magento deploy:mode:show 2>/dev/null | grep -i "current mode" | awk '{print $3}' || echo "")
+    if [ "$CURRENT_MODE" != "developer" ]; then
+        echo "Setting developer mode..."
+        bin/magento deploy:mode:set developer
+    fi
+    
+    # Ensure static content is deployed
+    if [ ! -d "pub/static/frontend" ] || [ -z "$(ls -A pub/static/frontend 2>/dev/null)" ]; then
+        echo "Deploying static content (CSS/JS)..."
+        bin/magento setup:static-content:deploy -f en_US
+        bin/magento cache:flush
+    fi
+    
+    # Ensure permissions are correct
     chown -R www-data:www-data /var/www/html 2>/dev/null || true
+    find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} + 2>/dev/null || true
+    find var generated vendor pub/static pub/media app/etc -type d -exec chmod g+ws {} + 2>/dev/null || true
 fi
 
 # Execute CMD
