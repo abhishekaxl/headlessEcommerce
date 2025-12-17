@@ -340,32 +340,108 @@ export function CheckoutForm() {
   // Order confirmation
   if (orderNumber) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          </svg>
+      <div className="order-confirmation">
+        <div className="confirmation-content">
+          <div className="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1>Order Confirmed!</h1>
+          <p className="message">Thank you for your order</p>
+          <div className="order-number">Order #{orderNumber}</div>
+          <p className="sub-message">
+            We&apos;ve sent a confirmation email with your order details.
+          </p>
+          <div className="actions">
+            <button
+              onClick={() => router.push('/account/orders')}
+              className="btn btn-primary"
+            >
+              View Order
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="btn btn-outline"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
-        <p className="text-gray-600 mb-4">Thank you for your order</p>
-        <p className="text-xl font-semibold text-purple-600 mb-8">Order #{orderNumber}</p>
-        <p className="text-gray-500 mb-8">
-          We&apos;ve sent a confirmation email with your order details.
-        </p>
-        <div className="flex gap-4 justify-center">
-          <button
-            onClick={() => router.push('/account/orders')}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            View Order
-          </button>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            Continue Shopping
-          </button>
-        </div>
+
+        <style jsx>{`
+          .order-confirmation {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 24px;
+            text-align: center;
+          }
+          .confirmation-content {
+            background: var(--white);
+            padding: 48px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+          }
+          .success-icon {
+            width: 80px;
+            height: 80px;
+            background-color: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: var(--white);
+          }
+          .success-icon svg {
+            width: 40px;
+            height: 40px;
+          }
+          h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 16px;
+          }
+          .message {
+            font-size: 1.25rem;
+            color: var(--dark-gray);
+            margin-bottom: 24px;
+          }
+          .order-number {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--black);
+            background: var(--cream);
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+          }
+          .sub-message {
+            color: var(--gray);
+            margin-bottom: 40px;
+          }
+          .actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+          }
+          .btn {
+            min-width: 180px;
+          }
+          @media (max-width: 640px) {
+            .confirmation-content {
+              padding: 32px 20px;
+            }
+            .actions {
+              flex-direction: column;
+            }
+            .btn {
+              width: 100%;
+            }
+          }
+        `}</style>
       </div>
     );
   }
