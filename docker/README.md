@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-This guide helps you deploy the complete Headless eCommerce stack using Docker.
+Complete Docker setup for Headless eCommerce with Magento 2.4.7.
 
 ## Prerequisites
 
@@ -11,193 +11,142 @@ This guide helps you deploy the complete Headless eCommerce stack using Docker.
 
 ## Quick Start
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/abhishekaxl/headlessEcommerce.git
-cd headlessEcommerce
-```
-
-### 2. Start All Services
+### 1. Start Services
 
 ```bash
 cd docker
 docker compose up -d
 ```
 
-This will start:
-- **Magento 2** (Backend via Nginx) - http://localhost:8080
+This starts:
 - **MySQL** - localhost:3306
 - **Elasticsearch** - localhost:9200
 - **Redis** - localhost:6379
-- **phpMyAdmin** - http://localhost:8081
-- **Mailhog** (Email testing) - http://localhost:8025
+- **PHP-FPM (Magento)** - Internal
+- **Nginx** - localhost:8080
+- **phpMyAdmin** - localhost:8081
+- **Mailhog** - localhost:8025
 
-> **Note:** This setup uses the existing Magento 2 installation in the `magento2/` directory. Make sure you have the Magento source code and Docker config files in place.
+### 2. Install Magento (First Time Only)
 
-### 3. Wait for Magento Installation
-
-First-time setup takes 10-15 minutes. Check progress:
-
+Wait for MySQL to be healthy:
 ```bash
-docker compose logs -f magento
+docker ps  # Check STATUS shows "healthy" for headless-mysql
 ```
 
-Wait until you see "Magento installation finished successfully".
+Install Magento:
+```bash
+docker exec headless-magento bash -c "cd /var/www/html && \
+  composer config --no-interaction audit.block-insecure false && \
+  COMPOSER_AUTH='{\"http-basic\":{\"repo.magento.com\":{\"username\":\"903a085d52adb99acec8bc43ce31be08\",\"password\":\"e01cc3e6d30310552a150996fc98032f\"}}}' \
+  composer install --no-interaction"
+```
 
-### 4. Access the Applications
+Run Magento setup:
+```bash
+docker exec headless-magento bash -c "cd /var/www/html && \
+  bin/magento setup:install \
+    --base-url=http://localhost:8080 \
+    --db-host=mysql \
+    --db-name=magento \
+    --db-user=magento \
+    --db-password=magento \
+    --admin-firstname=Admin \
+    --admin-lastname=User \
+    --admin-email=admin@example.com \
+    --admin-user=admin \
+    --admin-password=Admin@123 \
+    --language=en_US \
+    --currency=USD \
+    --timezone=America/New_York \
+    --use-rewrites=1 \
+    --search-engine=elasticsearch7 \
+    --elasticsearch-host=elasticsearch \
+    --elasticsearch-port=9200 \
+    --backend-frontname=admin"
+```
+
+Disable 2FA and set permissions:
+```bash
+docker exec headless-magento bash -c "cd /var/www/html && \
+  bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth && \
+  bin/magento setup:upgrade && \
+  bin/magento cache:flush && \
+  chown -R www-data:www-data ."
+```
+
+### 3. Access URLs
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Magento Admin | http://localhost:8080/admin | (configured during setup) |
 | Magento Frontend | http://localhost:8080 | - |
+| Magento Admin | http://localhost:8080/admin | admin / Admin@123 |
 | phpMyAdmin | http://localhost:8081 | root / rootpassword |
 | Mailhog | http://localhost:8025 | - |
 
-### 5. Start Next.js Frontend (separately)
+## Adobe Credentials
 
-```bash
-cd ..
-npm install
-npm run dev
-```
+Adobe Commerce Marketplace credentials are stored in `docker/auth.json`:
+- **Public Key**: 903a085d52adb99acec8bc43ce31be08
+- **Private Key**: e01cc3e6d30310552a150996fc98032f
 
-Next.js Storefront will be available at http://localhost:3000
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` file in project root:
-
-```env
-# Magento
-MAGENTO_URL=http://localhost:8080
-MAGENTO_ADMIN_USER=admin
-MAGENTO_ADMIN_PASSWORD=Admin@123
-
-# Next.js
-MAGENTO_GRAPHQL_URL=http://localhost:8080/graphql
-MAGENTO_STORE_CODE=default
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_GRAPHQL_ENDPOINT=/api/graphql
-```
-
-### Enable GraphQL in Magento
-
-After Magento is running:
-
-```bash
-docker exec -it headless-magento bash
-cd /bitnami/magento
-
-# Enable required modules
-bin/magento module:enable Magento_GraphQl Magento_CatalogGraphQl Magento_CustomerGraphQl
-bin/magento setup:upgrade
-bin/magento cache:flush
-```
+These are used to download Magento packages from repo.magento.com.
 
 ## Common Commands
 
-### Start Services
 ```bash
+# Start services
+docker compose up -d
+
+# Stop services
+docker compose down
+
+# View logs
+docker compose logs -f [service_name]
+
+# Restart a service
+docker compose restart magento
+
+# Access Magento CLI
+docker exec headless-magento bin/magento [command]
+
+# Clear all data (fresh start)
+docker compose down -v
 docker compose up -d
 ```
 
-### Stop Services
+## Sample Data (Optional)
+
+To install Magento sample data:
 ```bash
-docker compose down
-```
-
-### View Logs
-```bash
-docker compose logs -f [service_name]
-```
-
-### Restart a Service
-```bash
-docker compose restart magento
-```
-
-### Access Magento CLI
-```bash
-docker exec -it headless-magento bin/magento [command]
-```
-
-### Rebuild Frontend
-```bash
-docker compose build frontend
-docker compose up -d frontend
-```
-
-## Adobe Credentials & Sample Data
-
-### Docker Image
-This project uses the `bitnami/magento` Docker image, which is **publicly available** on Docker Hub. You do **not** need Adobe/Magento credentials to pull and run the container.
-
-### Sample Data & Extensions
-However, installing **Sample Data** (`bin/magento sampledata:deploy`) or other extensions via Composer requires authentication with the Adobe Commerce Marketplace.
-
-If you encounter authentication errors during sample data deployment:
-
-1.  Get your keys from [Adobe Commerce Marketplace](https://commercemarketplace.adobe.com/customer/accessKeys/).
-2.  Create an `auth.json` file in the Magento root (inside the container) or pass credentials when prompted.
-
-To install Magento sample data automatically, run the helper script:
-
-```bash
-./deploy-sample-data.sh
-```
-
-Or manually:
-
-```bash
-docker exec -it headless-magento bash
-cd /bitnami/magento
-bin/magento sampledata:deploy
-bin/magento setup:upgrade
-bin/magento indexer:reindex
-bin/magento cache:flush
+docker exec headless-magento bash -c "cd /var/www/html && \
+  bin/magento sampledata:deploy && \
+  bin/magento setup:upgrade && \
+  bin/magento indexer:reindex && \
+  bin/magento cache:flush"
 ```
 
 ## Troubleshooting
 
 ### Elasticsearch Memory Error
-Increase Docker memory to at least 4GB, or add to docker compose.yml:
-```yaml
-elasticsearch:
-  environment:
-    - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
-```
+Increase Docker memory to at least 4GB.
 
 ### Magento 503 Error
-Wait for installation to complete, or check logs:
+Wait for installation to complete or check logs:
 ```bash
-docker compose logs magento
+docker logs headless-magento
 ```
 
 ### Database Connection Error
-Ensure MySQL is running:
+Ensure MySQL is healthy:
 ```bash
-docker compose ps mysql
+docker ps | grep mysql
 ```
 
-### Clear All Data (Fresh Start)
+### Permission Issues
 ```bash
-docker compose down -v
-docker compose up -d
+docker exec headless-magento chown -R www-data:www-data /var/www/html
 ```
-
-## Production Deployment
-
-For production, update:
-
-1. Use proper SSL certificates
-2. Change all default passwords
-3. Set `MAGENTO_MODE=production`
-4. Configure proper email server
-5. Set up CDN for static assets
-6. Enable Varnish cache
 
 ## Architecture
 
@@ -207,8 +156,8 @@ For production, update:
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
 │  ┌──────────────┐     ┌──────────────┐                  │
-│  │   Next.js    │────▶│   Magento    │                  │
-│  │   :3000      │     │   :8080      │                  │
+│  │    Nginx     │────▶│   PHP-FPM    │                  │
+│  │    :8080     │     │   (Magento)  │                  │
 │  └──────────────┘     └──────┬───────┘                  │
 │                              │                           │
 │         ┌────────────────────┼────────────────────┐     │
@@ -221,9 +170,3 @@ For production, update:
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
-
-## Support
-
-For issues, create a GitHub issue at:
-https://github.com/abhishekaxl/headlessEcommerce/issues
-
