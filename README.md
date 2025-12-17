@@ -13,7 +13,7 @@ cd headlessEcommerce
 
 # Start all services
 cd docker
-docker-compose up -d
+docker compose up -d
 ```
 
 **Access:**
@@ -71,7 +71,7 @@ headlessEcommerce/
 │   └── graphql/            # GraphQL client, queries, mutations
 ├── middleware/             # GraphQL Normalization Gateway
 ├── docker/                 # Docker deployment files
-│   ├── docker-compose.yml  # Complete stack configuration
+│   ├── docker compose.yml  # Complete stack configuration
 │   ├── Dockerfile.frontend # Next.js container
 │   └── README.md           # Docker deployment guide
 └── docs/                   # Documentation
@@ -116,7 +116,7 @@ cp docker/env.example .env.local
 
 # 4. Start Magento (Docker)
 cd docker
-docker-compose up -d magento mysql elasticsearch redis
+docker compose up -d magento mysql elasticsearch redis
 
 # 5. Start Next.js development server
 cd ..
