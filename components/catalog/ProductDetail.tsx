@@ -5,14 +5,15 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Product } from '@/lib/graphql/types';
 
 interface ProductDetailProps {
   product: Product;
+  onSelectionChange?: (selected: Record<string, string>) => void;
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({ product, onSelectionChange }: ProductDetailProps) {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   const handleOptionChange = (optionCode: string, valueCode: string) => {
@@ -21,6 +22,10 @@ export function ProductDetail({ product }: ProductDetailProps) {
       [optionCode]: valueCode,
     }));
   };
+
+  useEffect(() => {
+    onSelectionChange?.(selectedOptions);
+  }, [selectedOptions, onSelectionChange]);
 
   if (!product.configurableOptions || product.configurableOptions.length === 0) {
     return null;
@@ -39,9 +44,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
             {option.values.map((value) => (
               <button
                 key={value.id}
-                onClick={() => handleOptionChange(option.code, value.code)}
+                onClick={() => handleOptionChange(option.code, value.id)}
                 className={`px-4 py-2 border rounded transition-colors ${
-                  selectedOptions[option.code] === value.code
+                  selectedOptions[option.code] === value.id
                     ? 'border-blue-600 bg-blue-50'
                     : 'border-gray-300 hover:border-gray-400'
                 }`}

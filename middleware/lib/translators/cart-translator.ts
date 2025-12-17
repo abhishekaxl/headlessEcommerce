@@ -299,13 +299,14 @@ export class CartTranslator extends BaseTranslator {
         };
 
       case 'AddToCart': {
-        const input = variables.input as { sku: string; quantity?: number } | undefined;
+        const input = variables.input as { sku: string; quantity?: number; options?: Array<{ code: string; value: string }> } | undefined;
+        const selectedOptions = (input?.options || []).map((o) => o.value).filter(Boolean);
         return {
           query: `
-            mutation AddToCart($cartId: String!, $sku: String!, $qty: Float!) {
+            mutation AddToCart($cartId: String!, $sku: String!, $qty: Float!, $selected: [ID!]!) {
               addProductsToCart(
                 cartId: $cartId
-                cartItems: [{ sku: $sku, quantity: $qty }]
+                cartItems: [{ sku: $sku, quantity: $qty, selected_options: $selected }]
               ) {
                 cart {
                   id
@@ -322,7 +323,7 @@ export class CartTranslator extends BaseTranslator {
               }
             }
           `,
-          variables: { cartId, sku: input?.sku, qty: input?.quantity ?? 1 },
+          variables: { cartId, sku: input?.sku, qty: input?.quantity ?? 1, selected: selectedOptions },
           operationName: 'AddToCart',
         };
       }

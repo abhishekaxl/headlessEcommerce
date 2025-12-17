@@ -6,9 +6,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getProduct } from '@/lib/graphql/queries';
-import { ProductDetail } from '@/components/catalog/ProductDetail';
 import { ProductImageGallery } from '@/components/catalog/ProductImageGallery';
-import { AddToCartButton } from '@/components/cart/AddToCartButton';
+import { ProductPurchasePanel } from '@/components/catalog/ProductPurchasePanel';
 
 interface ProductPageProps {
   params: {
@@ -104,12 +103,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           {/* Configurable Options */}
           {product.configurableOptions && product.configurableOptions.length > 0 && (
-            <ProductDetail product={product} />
+            <ProductPurchasePanel product={product} />
           )}
 
           {/* Add to Cart */}
           <div className="mt-8">
-            <AddToCartButton product={product} />
+            {(!product.configurableOptions || product.configurableOptions.length === 0) && (
+              <ProductPurchasePanel product={product} />
+            )}
           </div>
         </div>
       </div>

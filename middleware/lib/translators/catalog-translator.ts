@@ -50,6 +50,7 @@ export class CatalogTranslator extends BaseTranslator {
         query GetProduct($urlKey: String!) {
           products(filter: { url_key: { eq: $urlKey } }) {
             items {
+              __typename
               sku
               name
               url_key
@@ -86,6 +87,7 @@ export class CatalogTranslator extends BaseTranslator {
                   attribute_id
                   label
                   values {
+                    uid
                     value_index
                     label
                     swatch_data {
@@ -97,6 +99,7 @@ export class CatalogTranslator extends BaseTranslator {
                   product {
                     sku
                     name
+                    url_key
                     price_range {
                       minimum_price {
                         final_price {
@@ -498,6 +501,43 @@ export class CatalogTranslator extends BaseTranslator {
           return { product: null };
         }
 
+        const images = [
+          ...(item.image
+            ? [
+                {
+                  url: item.image.url,
+                  alt: item.image.label || item.name || '',
+                  type: 'image',
+                },
+              ]
+            : []),
+          ...(Array.isArray(item.media_gallery)
+            ? item.media_gallery
+                .filter(Boolean)
+                .map((m: any) => ({
+                  url: m.url,
+                  alt: m.label || item.name || '',
+                  type: 'image',
+                }))
+            : []),
+        ];
+
+        const configurableOptions = Array.isArray(item.configurable_options)
+          ? item.configurable_options.map((opt: any) => ({
+              id: String(opt.attribute_id || opt.attribute_code || ''),
+              label: opt.label || '',
+              code: opt.attribute_code || '',
+              values: Array.isArray(opt.values)
+                ? opt.values.map((v: any) => ({
+                    id: String(v.uid || v.value_index || ''),
+                    label: v.label || '',
+                    code: String(v.value_index ?? ''),
+                    swatch: v.swatch_data?.value || null,
+                  }))
+                : [],
+            }))
+          : [];
+
         return {
           product: {
             id: item.sku || '',
@@ -515,21 +555,13 @@ export class CatalogTranslator extends BaseTranslator {
               : null,
             priceRange: null,
             specialPrice: null,
-            images: item.image
-              ? [
-                  {
-                    url: item.image.url,
-                    alt: item.image.label || item.name || '',
-                    type: 'image',
-                  },
-                ]
-              : [],
+            images,
             type: this.mapProductType(item.__typename),
             stockStatus: item.stock_status || 'OUT_OF_STOCK',
             inStock: item.stock_status === 'IN_STOCK',
             quantity: null,
             attributes: [],
-            configurableOptions: [],
+            configurableOptions,
             relatedProducts: [],
             metaTitle: null,
             metaDescription: null,
