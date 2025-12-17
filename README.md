@@ -11,7 +11,7 @@ cd headlessEcommerce/docker
 docker compose up -d
 ```
 
-**That's it!** Magento 2.4.7 installs automatically on first run (~10-15 minutes).
+**That's it!** Magento 2.4.7 with sample data installs automatically on first run (~15-20 minutes).
 
 Check progress:
 ```bash
@@ -81,9 +81,6 @@ docker compose down -v && docker compose up -d
 
 # Access Magento CLI
 docker exec headless-magento bin/magento [command]
-
-# Install sample data
-docker exec headless-magento bash -c "cd /var/www/html && bin/magento sampledata:deploy && bin/magento setup:upgrade"
 ```
 
 ## Tech Stack

@@ -96,6 +96,26 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
     bin/magento setup:upgrade
     bin/magento cache:flush
     
+    # Install sample data
+    echo ""
+    echo "Installing Magento Sample Data (this takes a while)..."
+    set +e  # Temporarily disable exit on error
+    SAMPLEDATA_OUTPUT=$(bin/magento sampledata:deploy 2>&1)
+    SAMPLEDATA_EXIT=$?
+    set -e  # Re-enable exit on error
+    
+    if [ $SAMPLEDATA_EXIT -eq 0 ] || echo "$SAMPLEDATA_OUTPUT" | grep -q "already deployed\|already exists"; then
+        echo "$SAMPLEDATA_OUTPUT"
+        bin/magento setup:upgrade
+        echo "Reindexing catalog..."
+        bin/magento indexer:reindex
+        bin/magento cache:flush
+        echo "Sample data installed successfully!"
+    else
+        echo "$SAMPLEDATA_OUTPUT"
+        echo "Warning: Sample data installation had issues, continuing anyway..."
+    fi
+    
     # Set permissions
     echo "Setting permissions..."
     find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} + 2>/dev/null || true
@@ -105,6 +125,7 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
     echo ""
     echo "=========================================="
     echo "   Magento Installation Complete!"
+    echo "   (Includes Sample Data)"
     echo "=========================================="
     echo ""
     echo "Frontend: ${MAGENTO_BASE_URL:-http://localhost:8080}"
