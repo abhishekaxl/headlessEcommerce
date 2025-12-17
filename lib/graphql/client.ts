@@ -75,6 +75,8 @@ export async function executeGraphQL<T = unknown>(
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
+      // Ensure cart/customer cookies are always sent from the browser
+      credentials: 'include',
       body: JSON.stringify(request),
       // Cache configuration for server components
       ...(typeof window === 'undefined' && request.operationName && cacheableOps.has(request.operationName)

@@ -23,6 +23,7 @@ export const Header: React.FC = () => {
         const res = await fetch('/api/graphql', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             query: `query GetCategories { categories { id name slug children { id name slug children { id name slug } } } }`,
             operationName: 'GetCategories',

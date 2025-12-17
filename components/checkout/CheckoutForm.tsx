@@ -79,6 +79,7 @@ export function CheckoutForm() {
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             query GetCheckout {
@@ -140,6 +141,7 @@ export function CheckoutForm() {
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             mutation SetShippingAddress($input: AddressInput!, $email: String!) {
@@ -168,6 +170,7 @@ export function CheckoutForm() {
       await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             mutation SetShippingMethod($shippingMethodCode: String!) {
@@ -201,6 +204,7 @@ export function CheckoutForm() {
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             mutation SetBillingAddress($input: AddressInput!) {
@@ -238,6 +242,7 @@ export function CheckoutForm() {
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             mutation SetPaymentMethod($paymentMethodCode: String!) {
@@ -274,6 +279,7 @@ export function CheckoutForm() {
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           query: `
             mutation PlaceOrder($input: PlaceOrderInput!) {
