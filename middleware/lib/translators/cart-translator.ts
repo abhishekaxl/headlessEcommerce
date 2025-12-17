@@ -111,7 +111,7 @@ function normalizeMagentoCart(cart: any) {
 function normalizeCheckoutFromCart(cart: any) {
   const normalizedCart = normalizeMagentoCart(cart);
 
-  const shipAddr = cart?.shipping_addresses?.[0]?.shipping_address;
+  const shipAddr = cart?.shipping_addresses?.[0];
   const billAddr = cart?.billing_address;
 
   const toAddr = (a: any) =>
@@ -266,17 +266,15 @@ export class CartTranslator extends BaseTranslator {
                     method_title
                     amount { value currency }
                   }
-                  shipping_address {
-                    firstname
-                    lastname
-                    company
-                    street
-                    city
-                    region { code region }
-                    postcode
-                    country { code }
-                    telephone
-                  }
+                  firstname
+                  lastname
+                  company
+                  street
+                  city
+                  region { code region }
+                  postcode
+                  country { code }
+                  telephone
                 }
                 billing_address {
                   firstname
@@ -432,9 +430,7 @@ export class CartTranslator extends BaseTranslator {
                 cart {
                   id
                   shipping_addresses {
-                    shipping_address {
-                      firstname lastname company street city region { code region } postcode country { code } telephone
-                    }
+                    firstname lastname company street city region { code region } postcode country { code } telephone
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                   }
@@ -478,7 +474,7 @@ export class CartTranslator extends BaseTranslator {
                     firstname lastname company street city region { code region } postcode country { code } telephone
                   }
                   shipping_addresses {
-                    shipping_address { firstname lastname company street city region { code region } postcode country { code } telephone }
+                    firstname lastname company street city region { code region } postcode country { code } telephone
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                   }
@@ -521,7 +517,7 @@ export class CartTranslator extends BaseTranslator {
                   shipping_addresses {
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
-                    shipping_address { firstname lastname company street city region { code region } postcode country { code } telephone }
+                    firstname lastname company street city region { code region } postcode country { code } telephone
                   }
                   available_payment_methods { code title }
                   selected_payment_method { code title }
@@ -549,7 +545,7 @@ export class CartTranslator extends BaseTranslator {
                   selected_payment_method { code title }
                   shipping_addresses {
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
-                    shipping_address { firstname lastname company street city region { code region } postcode country { code } telephone }
+                    firstname lastname company street city region { code region } postcode country { code } telephone
                   }
                   billing_address { firstname lastname company street city region { code region } postcode country { code } telephone }
                   items { id quantity product { sku name url_key image { url label } } prices { price { value currency } row_total { value currency } } }
