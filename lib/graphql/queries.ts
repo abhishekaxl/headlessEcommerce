@@ -108,58 +108,99 @@ export async function getProductsByCategory(
   filters?: Record<string, unknown>,
   sort?: { field: string; direction: string }
 ): Promise<ProductConnection> {
-  const result = await query<{ productsByCategory: ProductConnection }>(
-    `
-      query ProductsByCategory(
-        $categorySlug: String!
-        $pagination: PaginationInput
-        $filters: ProductFilters
-        $sort: ProductSort
-      ) {
-        productsByCategory(
-          categorySlug: $categorySlug
-          pagination: $pagination
-          filters: $filters
-          sort: $sort
+  try {
+    const result = await query<{ productsByCategory: ProductConnection }>(
+      `
+        query ProductsByCategory(
+          $categorySlug: String!
+          $pagination: PaginationInput
+          $filters: ProductFilters
+          $sort: ProductSort
         ) {
-          items {
-            id
-            sku
-            name
-            slug
-            price {
-              amount
-              currency
-              formatted
+          productsByCategory(
+            categorySlug: $categorySlug
+            pagination: $pagination
+            filters: $filters
+            sort: $sort
+          ) {
+            items {
+              id
+              sku
+              name
+              slug
+              price {
+                amount
+                currency
+                formatted
+              }
+              images {
+                url
+                alt
+              }
+              inStock
+              stockStatus
             }
-            images {
-              url
-              alt
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+              totalCount
             }
-            inStock
-            stockStatus
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
             totalCount
           }
-          totalCount
         }
-      }
-    `,
-    {
-      categorySlug,
-      pagination,
-      filters,
-      sort,
-    },
-    'ProductsByCategory'
-  );
+      `,
+      {
+        categorySlug,
+        pagination,
+        filters,
+        sort,
+      },
+      'ProductsByCategory'
+    );
 
-  return result.productsByCategory;
+    // Handle different response structures
+    console.log('[getProductsByCategory] Raw result:', JSON.stringify(result, null, 2).substring(0, 500));
+    
+    if (result && result.productsByCategory) {
+      console.log('[getProductsByCategory] Found productsByCategory, items count:', result.productsByCategory.items?.length || 0);
+      return result.productsByCategory;
+    }
+    
+    // Check if result has data property (nested structure)
+    if (result && typeof result === 'object' && 'data' in result) {
+      const data = (result as { data?: { productsByCategory?: ProductConnection } }).data;
+      if (data?.productsByCategory) {
+        console.log('[getProductsByCategory] Found productsByCategory in data, items count:', data.productsByCategory.items?.length || 0);
+        return data.productsByCategory;
+      }
+    }
+    
+    console.warn('[getProductsByCategory] No productsByCategory found in result');
+    // Return empty result if no data
+    return {
+      items: [],
+      pageInfo: {
+        hasNextPage: false,
+        hasPreviousPage: false,
+        totalCount: 0,
+      },
+      totalCount: 0,
+    };
+  } catch (error) {
+    console.error('[getProductsByCategory] Error:', error);
+    // Return empty result on error
+    return {
+      items: [],
+      pageInfo: {
+        hasNextPage: false,
+        hasPreviousPage: false,
+        totalCount: 0,
+      },
+      totalCount: 0,
+    };
+  }
 }
 
 /**
@@ -231,40 +272,65 @@ export async function getCategories(parentId?: string): Promise<Category[]> {
  * Get a single category by slug
  */
 export async function getCategory(slug: string): Promise<Category | null> {
-  const result = await query<{ category: Category | null }>(
-    `
-      query GetCategory($slug: String!) {
-        category(slug: $slug) {
-          id
-          name
-          slug
-          description
-          image {
-            url
-            alt
-          }
-          parentId
-          children {
+  try {
+    console.log('[getCategory] Fetching category with slug:', slug);
+    
+    const result = await query<{ category: Category | null }>(
+      `
+        query GetCategory($slug: String!) {
+          category(slug: $slug) {
             id
             name
             slug
+            description
+            image {
+              url
+              alt
+            }
+            parentId
+            children {
+              id
+              name
+              slug
+            }
+            breadcrumbs {
+              id
+              name
+              slug
+            }
+            metaTitle
+            metaDescription
+            canonicalUrl
           }
-          breadcrumbs {
-            id
-            name
-            slug
-          }
-          metaTitle
-          metaDescription
-          canonicalUrl
         }
-      }
-    `,
-    { slug },
-    'GetCategory'
-  );
+      `,
+      { slug },
+      'GetCategory'
+    );
 
-  return result.category;
+    console.log('[getCategory] Raw result:', JSON.stringify(result, null, 2).substring(0, 500));
+    
+    // Handle different response structures
+    if (result && result.category) {
+      console.log('[getCategory] Found category:', result.category.name);
+      return result.category;
+    }
+    
+    // Check if result has data property (nested structure)
+    if (result && typeof result === 'object' && 'data' in result) {
+      const data = (result as { data?: { category?: Category | null } }).data;
+      if (data?.category) {
+        console.log('[getCategory] Found category in data:', data.category.name);
+        return data.category;
+      }
+    }
+    
+    console.warn('[getCategory] No category found for slug:', slug);
+    return null;
+  } catch (error) {
+    console.error('[getCategory] Error fetching category:', error);
+    return null;
+  }
 }
 
 /**

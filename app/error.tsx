@@ -17,7 +17,13 @@ export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
     // Log error to console for debugging
     console.error('Application error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
   }, [error]);
+
+  const isNetworkError = error.message?.toLowerCase().includes('network') || 
+                        error.message?.toLowerCase().includes('fetch') ||
+                        error.message?.toLowerCase().includes('failed to fetch');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -27,9 +33,28 @@ export default function Error({ error, reset }: ErrorProps) {
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
             Something went wrong
           </h2>
-          <p className="text-gray-600 mb-6">
-            We encountered an unexpected error. Please try again or return to the homepage.
-          </p>
+          
+          {isNetworkError ? (
+            <>
+              <p className="text-gray-600 mb-4">
+                Network connection error. Please check:
+              </p>
+              <ul className="text-left text-sm text-gray-600 mb-6 space-y-2 bg-gray-50 p-4 rounded">
+                <li>• Make sure the development server is running</li>
+                <li>• Check your internet connection</li>
+                <li>• Try refreshing the page</li>
+                <li>• Check the browser console for more details</li>
+              </ul>
+            </>
+          ) : (
+            <p className="text-gray-600 mb-6">
+              We encountered an unexpected error. Please try again or return to the homepage.
+            </p>
+          )}
+          
+          <div className="text-left text-sm text-gray-500 mb-4 bg-gray-50 p-3 rounded">
+            <strong>Error:</strong> {error.message || 'Unknown error'}
+          </div>
           
           {error.digest && (
             <p className="text-sm text-gray-500 mb-4">

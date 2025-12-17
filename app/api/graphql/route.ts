@@ -12,7 +12,7 @@ import { executeMagentoGraphQL } from '../../../middleware/lib/magento/client';
 import { requiresAuthentication } from '../../../middleware/lib/auth/auth-handler';
 import { ensureCartToken } from '../../../middleware/lib/cart/cart-handler';
 import { normalizeValidationError } from '../../../middleware/lib/errors/normalizer';
-import { isOperationAllowed, getOperationDefinition } from '../../../middleware/lib/registry/operation-registry';
+import { isOperationAllowed, getOperationDefinition, getAllowedOperations } from '../../../middleware/lib/registry/operation-registry';
 import { config } from '../../../middleware/lib/config';
 import { ErrorSeverity, ErrorSource } from '../../../middleware/lib/types';
 
@@ -173,6 +173,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       operationName = extracted || undefined;
     }
 
+    console.log(`[GraphQL API] Operation name: ${operationName || 'NOT FOUND'}`);
+    console.log(`[GraphQL API] Query preview: ${body.query.substring(0, 200)}...`);
+
     if (!operationName) {
       return NextResponse.json(
         {
@@ -190,14 +193,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Check if operation is allowed
     if (!isOperationAllowed(operationName)) {
+      const allowedOps = getAllowedOperations().join(', ');
+      console.error(`[GraphQL API] Operation "${operationName}" is not allowed. Allowed operations: ${allowedOps}`);
+      
       return NextResponse.json(
         {
           errors: [
-            normalizeValidationError(`Operation "${operationName}" is not allowed`),
+            normalizeValidationError(
+              `Operation "${operationName}" is not allowed. ` +
+              `Allowed operations: ${allowedOps.substring(0, 200)}${allowedOps.length > 200 ? '...' : ''}`
+            ),
           ],
           data: null,
         } as GraphQLResponse,
-        { status: 403 }
+        { 
+          status: 403,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        }
       );
     }
 
@@ -302,7 +314,191 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let normalizedData: unknown = null;
     if (magentoResult.data) {
       try {
+        console.log(`[${operationName}] Raw Magento data before normalization:`, JSON.stringify(magentoResult.data, null, 2).substring(0, 1000));
+        
+        // First, normalize the initial response
         normalizedData = translator.normalize(magentoResult.data, context);
+        
+        console.log(`[${operationName}] Normalized data:`, JSON.stringify(normalizedData, null, 2).substring(0, 1000));
+        
+        // Workaround for ProductsByCategory: Use products query if category.products is empty
+        // This ensures we get all products assigned to the category, even if category.products doesn't return them
+        if (operationName === 'ProductsByCategory' && magentoResult.data && typeof magentoResult.data === 'object') {
+          const magentoData = magentoResult.data as Record<string, unknown>;
+          console.log(`[ProductsByCategory] First query raw response:`, JSON.stringify(magentoData, null, 2).substring(0, 1000));
+          
+          // Check the raw Magento response to see if category.products has items
+          let hasProductsFromFirstQuery = false;
+          let category: {
+            id?: string;
+            name?: string;
+            url_key?: string;
+            children?: Array<{ id?: string }>;
+            products?: {
+              items?: unknown[];
+              total_count?: number;
+            };
+          } | undefined;
+          
+          if (magentoData.categoryList && Array.isArray(magentoData.categoryList)) {
+            console.log(`[ProductsByCategory] categoryList length:`, magentoData.categoryList.length);
+            
+            if (magentoData.categoryList.length > 0) {
+              category = magentoData.categoryList[0] as {
+                id?: string;
+                name?: string;
+                url_key?: string;
+                children?: Array<{ id?: string }>;
+                products?: {
+                  items?: unknown[];
+                  total_count?: number;
+                };
+              };
+              
+              console.log(`[ProductsByCategory] Category found:`, {
+                id: category.id,
+                name: category.name,
+                url_key: category.url_key,
+                childrenCount: category.children?.length || 0,
+              });
+              
+              // Check if category.products has items in the raw response
+              hasProductsFromFirstQuery = !!(category.products && category.products.items && category.products.items.length > 0);
+              console.log(`[ProductsByCategory] First query has products:`, hasProductsFromFirstQuery, 'category.id:', category.id, 'products.count:', category.products?.items?.length || 0);
+              console.log(`[ProductsByCategory] Category products structure:`, {
+                hasProducts: !!category.products,
+                hasItems: !!(category.products?.items),
+                itemsLength: category.products?.items?.length || 0,
+                totalCount: category.products?.total_count || 0,
+              });
+              
+              // Build category IDs array (parent + children if they exist)
+              // Always make second query if first query returned no products
+              if (category.id && !hasProductsFromFirstQuery) {
+              // Convert category IDs to integers (Magento expects Int for category_id)
+              const categoryIds: number[] = [];
+              const categoryIdInt = parseInt(category.id, 10);
+              if (!isNaN(categoryIdInt)) {
+                categoryIds.push(categoryIdInt);
+              }
+              
+              // Include children if they exist
+              if (category.children && category.children.length > 0) {
+                category.children.forEach((child) => {
+                  if (child.id) {
+                    const childIdInt = parseInt(child.id, 10);
+                    if (!isNaN(childIdInt)) {
+                      categoryIds.push(childIdInt);
+                    }
+                  }
+                });
+              }
+              
+              console.log(`[ProductsByCategory] First query returned no products. Making second query with category IDs:`, categoryIds);
+              
+              // Make second query with category_id 'in' filter
+              // This will get all products assigned to the category (and subcategories)
+              const secondQuery = {
+                query: `
+                  query ProductsByCategorySubcategories(
+                    $categoryIds: [Int]!
+                    $pageSize: Int!
+                    $currentPage: Int!
+                  ) {
+                    products(
+                      filter: { category_id: { in: $categoryIds } }
+                      pageSize: $pageSize
+                      currentPage: $currentPage
+                    ) {
+                      items {
+                        sku
+                        name
+                        url_key
+                        price_range {
+                          minimum_price {
+                            final_price {
+                              value
+                              currency
+                            }
+                          }
+                        }
+                        image {
+                          url
+                          label
+                        }
+                        stock_status
+                      }
+                      page_info {
+                        current_page
+                        page_size
+                        total_pages
+                      }
+                      total_count
+                    }
+                  }
+                `,
+                variables: {
+                  categoryIds,
+                  pageSize: (() => {
+                    const vars = body.variables as Record<string, unknown> | undefined;
+                    if (vars?.pagination) {
+                      const pagination = vars.pagination as Record<string, unknown> | undefined;
+                      return pagination?.limit as number || 20;
+                    }
+                    return 20;
+                  })(),
+                  currentPage: 1,
+                },
+                operationName: 'ProductsByCategorySubcategories',
+              };
+              
+              try {
+                const secondResult = await executeMagentoGraphQL(secondQuery, context);
+                console.log(`[ProductsByCategory] Second query result:`, JSON.stringify(secondResult.data, null, 2).substring(0, 500));
+                
+                if (secondResult.data) {
+                  console.log(`[ProductsByCategory] Second query raw data structure:`, {
+                    hasProducts: !!(secondResult.data as Record<string, unknown>).products,
+                    dataKeys: Object.keys(secondResult.data as Record<string, unknown>),
+                  });
+                  
+                  // Normalize the second result
+                  const secondNormalized = translator.normalize(secondResult.data, context);
+                  console.log(`[ProductsByCategory] Second query normalized:`, JSON.stringify(secondNormalized, null, 2).substring(0, 1000));
+                  
+                  if (secondNormalized && typeof secondNormalized === 'object') {
+                    const secondData = secondNormalized as Record<string, unknown>;
+                    console.log(`[ProductsByCategory] Second normalized data keys:`, Object.keys(secondData));
+                    
+                    // Use products from second query if available
+                    if (secondData.productsByCategory) {
+                      const productCount = (secondData.productsByCategory as { items?: unknown[] }).items?.length || 0;
+                      console.log(`[ProductsByCategory] Using products from second query. Count:`, productCount);
+                      normalizedData = secondData;
+                    } else {
+                      console.log(`[ProductsByCategory] Second query normalized but no productsByCategory found. Keys:`, Object.keys(secondData));
+                      console.log(`[ProductsByCategory] Second normalized data:`, JSON.stringify(secondData, null, 2).substring(0, 500));
+                    }
+                  } else {
+                    console.log(`[ProductsByCategory] Second normalized data is not an object:`, typeof secondNormalized);
+                  }
+                } else {
+                  console.log(`[ProductsByCategory] Second query returned no data`);
+                }
+              } catch (error) {
+                console.error('[ProductsByCategory] Error executing second query for products:', error);
+                // Continue with existing result if second query fails
+              }
+              } else {
+                console.log(`[ProductsByCategory] Skipping second query - hasProductsFromFirstQuery:`, hasProductsFromFirstQuery, 'category.id:', category.id);
+              }
+            } else {
+              console.log(`[ProductsByCategory] categoryList is empty`);
+            }
+          } else {
+            console.log(`[ProductsByCategory] No categoryList found in Magento response`);
+          }
+        }
       } catch (error) {
         console.error('Error normalizing response:', error);
         // Return raw data if normalization fails
@@ -311,10 +507,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Build response
+    console.log(`[${operationName}] Final normalizedData:`, JSON.stringify(normalizedData, null, 2).substring(0, 500));
+    
     const response: GraphQLResponse = {
       data: normalizedData as Record<string, unknown>,
       errors: magentoResult.errors,
     };
+    
+    console.log(`[${operationName}] Final response structure:`, {
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      hasErrors: !!(response.errors && response.errors.length > 0),
+    });
 
     // Set response headers
     const responseHeaders = new Headers();

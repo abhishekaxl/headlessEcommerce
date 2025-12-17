@@ -89,3 +89,4 @@ export const getConfig = (): MiddlewareConfig => {
 
 export const config = getConfig();
 
+

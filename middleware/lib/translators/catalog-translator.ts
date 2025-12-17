@@ -126,8 +126,8 @@ export class CatalogTranslator extends BaseTranslator {
 
     return {
       query: `
-        query GetCategory($id: String!) {
-          categoryList(filters: { url_path: { eq: $id } }) {
+        query GetCategory($slug: String!) {
+          categoryList(filters: { url_key: { eq: $slug } }) {
             id
             name
             url_key
@@ -146,7 +146,7 @@ export class CatalogTranslator extends BaseTranslator {
         }
       `,
       variables: {
-        id: slug,
+        slug,
       },
       operationName: 'GetCategory',
     };
@@ -157,10 +157,14 @@ export class CatalogTranslator extends BaseTranslator {
     context: RequestContext
   ): MagentoGraphQLRequest {
     const parentId = variables.parentId as string | undefined;
+    
+    // Magento's parent_id filter expects a String, not Int
+    // Default to "2" (root category) if not provided
+    const magentoParentId = parentId || '2';
 
     return {
       query: `
-        query GetCategories($parentId: Int) {
+        query GetCategories($parentId: String!) {
           categoryList(filters: { parent_id: { eq: $parentId } }) {
             id
             name
@@ -180,7 +184,7 @@ export class CatalogTranslator extends BaseTranslator {
         }
       `,
       variables: {
-        parentId: parentId ? parseInt(parentId, 10) : 2, // Default to root category
+        parentId: magentoParentId,
       },
       operationName: 'GetCategories',
     };
@@ -198,70 +202,115 @@ export class CatalogTranslator extends BaseTranslator {
     const pageSize = pagination?.limit || 20;
     const currentPage = 1; // TODO: Calculate from cursor
 
-    // Build Magento filter
-    const magentoFilters: Record<string, unknown> = {
-      category_id: { eq: categorySlug }, // TODO: Resolve category ID from slug
-    };
+    // Build sort - Magento's category.products expects a single ProductAttributeSortInput object
+    const magentoSort = this.buildMagentoSortSingle(sort);
+    const hasSort = magentoSort !== undefined;
 
-    // Add price range filter if provided
-    if (filters?.priceRange) {
-      const priceRange = filters.priceRange as { min: number; max: number };
-      magentoFilters.price = {
-        from: priceRange.min,
-        to: priceRange.max,
-      };
-    }
-
-    // Build sort
-    const magentoSort = this.buildMagentoSort(sort);
-
+    // Strategy: Use category.products which should include subcategories if category is "anchor"
+    // If that returns 0, we'll need to handle it in normalization by making a second query
+    // For now, return the query that gets category info and products
     return {
-      query: `
-        query ProductsByCategory(
-          $filters: ProductAttributeFilterInput!
-          $pageSize: Int!
-          $currentPage: Int!
-          $sort: [ProductAttributeSortInput]
-        ) {
-          products(
-            filter: $filters
-            pageSize: $pageSize
-            currentPage: $currentPage
-            sort: $sort
+      query: hasSort
+        ? `
+          query ProductsByCategory(
+            $categorySlug: String!
+            $pageSize: Int!
+            $currentPage: Int!
+            $sort: ProductAttributeSortInput
           ) {
-            items {
-              sku
-              name
-              url_key
-              price_range {
-                minimum_price {
-                  final_price {
-                    value
-                    currency
+            categoryList(filters: { url_key: { eq: $categorySlug } }) {
+              id
+              children {
+                id
+              }
+              products(
+                pageSize: $pageSize
+                currentPage: $currentPage
+                sort: $sort
+              ) {
+                items {
+                  sku
+                  name
+                  url_key
+                  price_range {
+                    minimum_price {
+                      final_price {
+                        value
+                        currency
+                      }
+                    }
                   }
+                  image {
+                    url
+                    label
+                  }
+                  stock_status
                 }
+                page_info {
+                  current_page
+                  page_size
+                  total_pages
+                }
+                total_count
               }
-              image {
-                url
-                label
-              }
-              stock_status
             }
-            page_info {
-              current_page
-              page_size
-              total_pages
-            }
-            total_count
           }
-        }
-      `,
-      variables: {
-        filters: magentoFilters,
-        pageSize,
-        currentPage,
-        sort: magentoSort,
-      },
+        `
+        : `
+          query ProductsByCategory(
+            $categorySlug: String!
+            $pageSize: Int!
+            $currentPage: Int!
+          ) {
+            categoryList(filters: { url_key: { eq: $categorySlug } }) {
+              id
+              children {
+                id
+              }
+              products(
+                pageSize: $pageSize
+                currentPage: $currentPage
+              ) {
+                items {
+                  sku
+                  name
+                  url_key
+                  price_range {
+                    minimum_price {
+                      final_price {
+                        value
+                        currency
+                      }
+                    }
+                  }
+                  image {
+                    url
+                    label
+                  }
+                  stock_status
+                }
+                page_info {
+                  current_page
+                  page_size
+                  total_pages
+                }
+                total_count
+              }
+            }
+          }
+        `,
+      variables: hasSort
+        ? {
+            categorySlug,
+            pageSize,
+            currentPage,
+            sort: magentoSort,
+          }
+        : {
+            categorySlug,
+            pageSize,
+            currentPage,
+          },
       operationName: 'ProductsByCategory',
     };
   }
@@ -369,6 +418,27 @@ export class CatalogTranslator extends BaseTranslator {
     return [{ field: magentoField, direction: magentoDirection }];
   }
 
+  private buildMagentoSortSingle(
+    sort?: { field: string; direction: string }
+  ): { field: string; direction: string } | undefined {
+    if (!sort) {
+      return undefined;
+    }
+
+    const fieldMap: Record<string, string> = {
+      NAME: 'name',
+      PRICE: 'price',
+      CREATED_AT: 'created_at',
+      RELEVANCE: 'relevance',
+    };
+
+    const magentoField = fieldMap[sort.field] || sort.field.toLowerCase();
+    const magentoDirection = sort.direction === 'ASC' ? 'ASC' : 'DESC';
+
+    // Magento's category.products expects a single ProductAttributeSortInput, not an array
+    return { field: magentoField, direction: magentoDirection };
+  }
+
   normalize(magentoData: unknown, context: RequestContext): unknown {
     // Convert Magento response structure to canonical format
     if (!magentoData || typeof magentoData !== 'object') {
@@ -377,8 +447,214 @@ export class CatalogTranslator extends BaseTranslator {
 
     const data = magentoData as Record<string, unknown>;
 
-    // Handle categoryList (GetCategories)
-    if (data.categoryList && Array.isArray(data.categoryList)) {
+    // Handle products from products query FIRST (ProductsByCategory)
+    // This comes from the products query with category_id filter
+    if (data.products && typeof data.products === 'object') {
+      const productsData = data.products as {
+        items?: Array<{
+          sku: string;
+          name: string;
+          url_key: string;
+          price_range?: {
+            minimum_price?: {
+              final_price?: {
+                value: number;
+                currency: string;
+              };
+            };
+          };
+          image?: {
+            url: string;
+            label: string;
+          };
+          stock_status?: string;
+        }>;
+        page_info?: {
+          current_page: number;
+          page_size: number;
+          total_pages: number;
+        };
+        total_count?: number;
+      };
+
+      return {
+        productsByCategory: {
+          items: (productsData.items || []).map((item: any) => ({
+            id: item.sku || '',
+            sku: item.sku || '',
+            name: item.name || '',
+            slug: item.url_key || '',
+            price: item.price_range?.minimum_price?.final_price
+              ? {
+                  amount: item.price_range.minimum_price.final_price.value,
+                  currency: item.price_range.minimum_price.final_price.currency,
+                  formatted: `${item.price_range.minimum_price.final_price.currency} ${item.price_range.minimum_price.final_price.value.toFixed(2)}`,
+                }
+              : null,
+            images: item.image
+              ? [
+                  {
+                    url: item.image.url,
+                    alt: item.image.label || item.name || '',
+                  },
+                ]
+              : [],
+            inStock: item.stock_status === 'IN_STOCK',
+            stockStatus: item.stock_status || 'OUT_OF_STOCK',
+          })),
+          pageInfo: productsData.page_info
+            ? {
+                hasNextPage: (productsData.page_info.current_page || 0) < (productsData.page_info.total_pages || 0),
+                hasPreviousPage: (productsData.page_info.current_page || 0) > 1,
+                startCursor: undefined,
+                endCursor: undefined,
+                totalCount: productsData.total_count || 0,
+              }
+            : {
+                hasNextPage: false,
+                hasPreviousPage: false,
+                startCursor: undefined,
+                endCursor: undefined,
+                totalCount: productsData.total_count || 0,
+              },
+          totalCount: productsData.total_count || 0,
+        },
+      };
+    }
+
+    // Handle categoryList (GetCategories, GetCategory) - check for GetCategory first
+    // If categoryList has a single category without products field, it's GetCategory
+    if (data.categoryList && Array.isArray(data.categoryList) && data.categoryList.length === 1) {
+      const cat = data.categoryList[0] as any;
+      
+      // If category doesn't have products field, this is GetCategory query
+      if (!('products' in cat)) {
+        return {
+          category: {
+            id: String(cat.id || ''),
+            name: cat.name || '',
+            slug: cat.url_key || cat.url_path || '',
+            description: cat.description || null,
+            image: cat.image ? {
+              url: cat.image,
+              alt: cat.name || '',
+            } : null,
+            parentId: cat.path ? cat.path.split('/').slice(-2, -1)[0] : null,
+            children: (cat.children || []).map((child: any) => ({
+              id: String(child.id || ''),
+              name: child.name || '',
+              slug: child.url_key || child.url_path || '',
+            })),
+            breadcrumbs: cat.path ? cat.path.split('/').filter(Boolean).slice(0, -1).map((id: string) => ({
+              id: String(id),
+              name: '', // Would need to fetch names separately
+              slug: '',
+            })) : [],
+            metaTitle: null, // Magento doesn't return this in categoryList
+            metaDescription: null,
+            canonicalUrl: null,
+          },
+        };
+      }
+    }
+
+    // Handle products from categoryList.products (ProductsByCategory)
+    // This is the primary path - category.products should include subcategory products if category is "anchor"
+    if (data.categoryList && Array.isArray(data.categoryList) && data.categoryList.length > 0) {
+      const category = data.categoryList[0] as {
+        id?: string;
+        children?: Array<{ id?: string }>;
+        products?: {
+          items?: Array<{
+            sku: string;
+            name: string;
+            url_key: string;
+            price_range?: {
+              minimum_price?: {
+                final_price?: {
+                  value: number;
+                  currency: string;
+                };
+              };
+            };
+            image?: {
+              url: string;
+              label: string;
+            };
+            stock_status?: string;
+          }>;
+          page_info?: {
+            current_page: number;
+            page_size: number;
+            total_pages: number;
+          };
+          total_count?: number;
+        };
+      };
+
+      // If category has products, return them
+      if (category.products && category.products.items && category.products.items.length > 0) {
+        return {
+          productsByCategory: {
+            items: category.products.items.map((item: any) => ({
+              id: item.sku || '',
+              sku: item.sku || '',
+              name: item.name || '',
+              slug: item.url_key || '',
+              price: item.price_range?.minimum_price?.final_price
+                ? {
+                    amount: item.price_range.minimum_price.final_price.value,
+                    currency: item.price_range.minimum_price.final_price.currency,
+                    formatted: `${item.price_range.minimum_price.final_price.currency} ${item.price_range.minimum_price.final_price.value.toFixed(2)}`,
+                  }
+                : null,
+              images: item.image
+                ? [
+                    {
+                      url: item.image.url,
+                      alt: item.image.label || item.name || '',
+                    },
+                  ]
+                : [],
+              inStock: item.stock_status === 'IN_STOCK',
+              stockStatus: item.stock_status || 'OUT_OF_STOCK',
+            })),
+            pageInfo: category.products.page_info
+              ? {
+                  hasNextPage: (category.products.page_info.current_page || 0) < (category.products.page_info.total_pages || 0),
+                  hasPreviousPage: (category.products.page_info.current_page || 0) > 1,
+                  totalCount: category.products.total_count,
+                }
+              : {
+                  hasNextPage: false,
+                  hasPreviousPage: false,
+                },
+          },
+        };
+      }
+
+      // If category.products is empty but we have children, return empty
+      // The route handler will need to make a second query with category_id 'in' filter
+      // For now, we'll return a special marker that indicates we need subcategory query
+      if (category.products && (!category.products.items || category.products.items.length === 0) && 
+          category.children && category.children.length > 0) {
+        // Return empty - the route handler should detect this and make a second query
+        // TODO: Implement two-query approach in route handler
+        return {
+          productsByCategory: {
+            items: [],
+            pageInfo: {
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          },
+        };
+      }
+    }
+
+    // Handle multiple categories (GetCategories) - only if no products and not single category
+    if (data.categoryList && Array.isArray(data.categoryList) && data.categoryList.length > 1) {
+      // Multiple categories (GetCategories), return array
       return {
         categories: data.categoryList.map((cat: any) => ({
           id: String(cat.id || ''),
@@ -395,7 +671,7 @@ export class CatalogTranslator extends BaseTranslator {
             name: child.name || '',
             slug: child.url_key || child.url_path || '',
           })),
-          breadcrumbs: cat.path ? cat.path.split('/').filter(Boolean).slice(0, -1).map((id: string, index: number, arr: string[]) => ({
+          breadcrumbs: cat.path ? cat.path.split('/').filter(Boolean).slice(0, -1).map((id: string) => ({
             id: String(id),
             name: '', // Would need to fetch names separately
             slug: '',
@@ -404,10 +680,48 @@ export class CatalogTranslator extends BaseTranslator {
       };
     }
 
-    // Handle products
-    if (data.products) {
+
+    // Handle products from products query (SearchProducts, etc.)
+    if (data.products && typeof data.products === 'object') {
+      const productsData = data.products as {
+        items?: Array<{
+          sku: string;
+          name: string;
+          url_key: string;
+          price_range?: {
+            minimum_price?: {
+              final_price?: {
+                value: number;
+                currency: string;
+              };
+            };
+          };
+          image?: {
+            url: string;
+            label: string;
+          };
+          stock_status?: string;
+        }>;
+        page_info?: {
+          current_page: number;
+          page_size: number;
+          total_pages: number;
+        };
+        total_count?: number;
+      };
+
       return {
-        products: data.products,
+        products: productsData.items || [],
+        pageInfo: productsData.page_info
+          ? {
+              hasNextPage: (productsData.page_info.current_page || 0) < (productsData.page_info.total_pages || 0),
+              hasPreviousPage: (productsData.page_info.current_page || 0) > 1,
+              totalCount: productsData.total_count,
+            }
+          : {
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
       };
     }
 

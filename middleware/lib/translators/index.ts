@@ -35,3 +35,4 @@ export function registerTranslator(operationName: string, translator: BaseTransl
   translators[operationName] = translator;
 }
 
+

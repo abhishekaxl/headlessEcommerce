@@ -1,17 +1,15 @@
 /**
- * Root Layout
- * Next.js App Router root layout component
+ * Root Layout - Urban Jungle Co.
+ * Nature-inspired eCommerce layout
  */
 
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import { Header, Footer } from '@/components/organisms';
 
 export const metadata: Metadata = {
-  title: 'Headless eCommerce Portal',
-  description: 'Production-grade headless eCommerce portal built with Next.js and Magento',
+  title: 'Urban Jungle Co. | Discover the Beauty of Nature',
+  description: 'Your premier destination for all green. Curated selection of plants to inspire and enrich your living space.',
 };
 
 export default function RootLayout({
@@ -21,10 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {children}
+      <body>
+        <Header />
+        <main>{children}</main>
+        <Footer />
       </body>
     </html>
   );
 }
-

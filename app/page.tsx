@@ -1,40 +1,83 @@
 /**
- * Home Page
- * Landing page of the storefront
+ * Homepage - Urban Jungle Co.
+ * Nature-inspired eCommerce homepage using Atomic Design
  */
 
+import { getCategories, getProductsByCategory } from '@/lib/graphql/queries';
+import { HeroSection, FeaturesBar, ProductGrid } from '@/components/organisms';
+import { Text, Button } from '@/components/atoms';
 import Link from 'next/link';
 
-export default function HomePage() {
-  // For now, show static content
-  // GraphQL integration will be added once page is stable
+// Keep existing home components for now - they can be migrated later
+import { FlashSaleBanner } from '@/components/home/FlashSaleBanner';
+import { CategoriesSection } from '@/components/home/CategoriesSection';
+import { AboutSection } from '@/components/home/AboutSection';
+import { TestimonialsSection } from '@/components/home/TestimonialsSection';
+
+export default async function HomePage() {
+  let trendingProducts: any[] = [];
+  let popularProducts: any[] = [];
+  let categories: any[] = [];
+
+  try {
+    const productsResult = await getProductsByCategory('gear', { limit: 6 });
+    trendingProducts = productsResult?.items?.slice(0, 3) || [];
+    popularProducts = productsResult?.items?.slice(3, 6) || [];
+  } catch (error) {
+    console.error('Error fetching products:', error);
+  }
+
+  try {
+    categories = await getCategories();
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+  }
+
+  // Fallback products using atomic design structure
+  const fallbackProducts = [
+    { id: '1', sku: '1', name: 'Zen Bamboo', slug: 'zen-bamboo', price: { amount: 70, currency: 'USD', formatted: '$70.00' }, images: [], inStock: true },
+    { id: '2', sku: '2', name: 'Starlight Succulent', slug: 'starlight', price: { amount: 80, currency: 'USD', formatted: '$80.00' }, images: [], inStock: true },
+    { id: '3', sku: '3', name: 'Silver Mist', slug: 'silver-mist', price: { amount: 90, currency: 'USD', formatted: '$90.00' }, images: [], inStock: true },
+  ];
+
+  const displayTrending = trendingProducts.length > 0 ? trendingProducts : fallbackProducts;
+  const displayPopular = popularProducts.length > 0 ? popularProducts : fallbackProducts;
+
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Welcome to Our Store</h1>
+    <>
+      <HeroSection />
+      <FeaturesBar />
       
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold mb-4">Shop by Category</h2>
-        <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">Categories loading...</p>
-          <p className="text-sm text-gray-500 mb-4">
-            Sample categories from Magento will appear here.
-          </p>
-          <div className="mt-8 space-x-4">
-            <Link 
-              href="/search" 
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Browse Products
-            </Link>
-            <Link 
-              href="/test" 
-              className="inline-block px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Test Page
-            </Link>
-          </div>
+      {/* Trending Products Section */}
+      <section style={{ padding: '80px 24px', maxWidth: '1280px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <Text variant="h2">Trending Now</Text>
+          <Text variant="body" color="muted" as="p">Our most popular plants this season</Text>
+        </div>
+        <ProductGrid products={displayTrending} columns={3} />
+        <div style={{ textAlign: 'center', marginTop: '40px' }}>
+          <Link href="/shop">
+            <Button variant="outline">View All Products</Button>
+          </Link>
         </div>
       </section>
-    </main>
+      
+      <FlashSaleBanner />
+      <CategoriesSection categories={categories} />
+      <AboutSection />
+      
+      {/* Popular Products Section */}
+      <section style={{ padding: '80px 24px', background: '#f8f7f4' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <Text variant="h2">Popular Picks</Text>
+            <Text variant="body" color="muted" as="p">Customer favorites you&apos;ll love</Text>
+          </div>
+          <ProductGrid products={displayPopular} columns={3} />
+        </div>
+      </section>
+      
+      <TestimonialsSection />
+    </>
   );
 }

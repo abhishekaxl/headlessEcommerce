@@ -37,6 +37,7 @@ export async function executeGraphQL<T = unknown>(
 ): Promise<GraphQLResponse<T>> {
   try {
     const endpoint = getGraphQLEndpoint();
+    console.log(`[GraphQL Client] Making request to: ${endpoint}`);
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -54,8 +55,38 @@ export async function executeGraphQL<T = unknown>(
         : {}), // No cache config for client-side or mutations
     });
 
+    console.log(`[GraphQL Client] Response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`GraphQL request failed: ${response.statusText}`);
+      // Try to get error message from response
+      let errorMessage = `GraphQL request failed: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.text();
+        console.error(`[GraphQL Client] Error response body:`, errorData.substring(0, 500));
+        // Try to parse as JSON
+        try {
+          const errorJson = JSON.parse(errorData);
+          if (errorJson.errors && errorJson.errors.length > 0) {
+            errorMessage = errorJson.errors[0].message || errorMessage;
+          }
+        } catch {
+          // Not JSON, use text as is
+          if (errorData && errorData.length > 0) {
+            errorMessage = errorData.substring(0, 200);
+          }
+        }
+      } catch (e) {
+        console.error('[GraphQL Client] Could not read error response:', e);
+      }
+      throw new Error(errorMessage);
+    }
+
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error(`[GraphQL Client] Non-JSON response:`, text.substring(0, 500));
+      throw new Error(`Expected JSON response but got ${contentType}. Response: ${text.substring(0, 200)}`);
     }
 
     const result: GraphQLResponse<T> = await response.json();
@@ -63,7 +94,7 @@ export async function executeGraphQL<T = unknown>(
     // Handle GraphQL errors
     if (result.errors && result.errors.length > 0) {
       // Log errors for debugging
-      console.error('GraphQL errors:', result.errors);
+      console.error('[GraphQL Client] GraphQL errors:', result.errors);
       
       // Throw error with normalized error details
       const firstError = result.errors[0];
@@ -72,8 +103,20 @@ export async function executeGraphQL<T = unknown>(
 
     return result;
   } catch (error) {
-    console.error('GraphQL request error:', error);
-    throw error;
+    console.error('[GraphQL Client] Request error:', error);
+    
+    // Handle network errors specifically
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      const endpoint = getGraphQLEndpoint();
+      throw new Error(`Network error: Could not connect to ${endpoint}. Make sure the server is running.`);
+    }
+    
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error(`Unknown error: ${String(error)}`);
   }
 }
 
@@ -95,13 +138,22 @@ export async function query<T = unknown>(
     if (!response.data) {
       // Return empty object/array based on expected return type
       // This prevents errors when data is missing
-      console.warn('GraphQL query returned no data');
+      console.warn(`[GraphQL Client] Query "${operationName}" returned no data`);
       return {} as T;
     }
 
     return response.data;
   } catch (error) {
-    console.error('GraphQL query error:', error);
+    console.error(`[GraphQL Client] Query "${operationName}" error:`, error);
+    
+    // For network errors, still return empty to prevent page crashes
+    // But log the error clearly
+    if (error instanceof Error) {
+      if (error.message.includes('Network error') || error.message.includes('fetch')) {
+        console.error(`[GraphQL Client] Network error detected. Server may not be running.`);
+      }
+    }
+    
     // Return empty result instead of throwing to prevent page crashes
     // This allows pages to render even if GraphQL fails
     return {} as T;

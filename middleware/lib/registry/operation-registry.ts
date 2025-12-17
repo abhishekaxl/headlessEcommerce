@@ -262,3 +262,4 @@ export function requiresAuth(operationName: string): boolean {
   return operation?.requiresAuth === true;
 }
 
+

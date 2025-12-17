@@ -250,3 +250,4 @@ export function normalizeMagentoGraphQLErrors(
   return errors.map((error) => normalizeMagentoGraphQLError(error));
 }
 
+
