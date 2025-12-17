@@ -3,6 +3,8 @@
  * Displays cart totals and summary
  */
 
+'use client';
+
 import { Cart } from '@/lib/graphql/types';
 
 interface CartSummaryProps {
