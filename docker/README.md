@@ -26,12 +26,14 @@ docker compose up -d
 ```
 
 This will start:
-- **Magento 2** (Backend) - http://localhost:8080 (using bitnami/magento:2.4)
-- **Next.js** (Frontend) - http://localhost:3000
+- **Magento 2** (Backend via Nginx) - http://localhost:8080
 - **MySQL** - localhost:3306
 - **Elasticsearch** - localhost:9200
 - **Redis** - localhost:6379
+- **phpMyAdmin** - http://localhost:8081
 - **Mailhog** (Email testing) - http://localhost:8025
+
+> **Note:** This setup uses the existing Magento 2 installation in the `magento2/` directory. Make sure you have the Magento source code and Docker config files in place.
 
 ### 3. Wait for Magento Installation
 
@@ -47,10 +49,20 @@ Wait until you see "Magento installation finished successfully".
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Magento Admin | http://localhost:8080/admin | admin / Admin@123 |
+| Magento Admin | http://localhost:8080/admin | (configured during setup) |
 | Magento Frontend | http://localhost:8080 | - |
-| Next.js Storefront | http://localhost:3000 | - |
+| phpMyAdmin | http://localhost:8081 | root / rootpassword |
 | Mailhog | http://localhost:8025 | - |
+
+### 5. Start Next.js Frontend (separately)
+
+```bash
+cd ..
+npm install
+npm run dev
+```
+
+Next.js Storefront will be available at http://localhost:3000
 
 ## Configuration
 
