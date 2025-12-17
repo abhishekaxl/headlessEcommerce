@@ -409,11 +409,25 @@ export class CartTranslator extends BaseTranslator {
 
       case 'SetShippingAddress': {
         const input = variables.input as any;
-        const email = (variables.email as string | undefined) || (variables.guestEmail as string | undefined) || '';
+        const email =
+          (variables.email as string | undefined) ||
+          (variables.guestEmail as string | undefined) ||
+          '';
+        const isCustomer = !!context.customerToken;
+
+        // For guests Magento requires setting email on cart before shipping.
+        // For logged-in customers, setGuestEmailOnCart is not needed (and may error).
+        const guestEmailMutation = !isCustomer
+          ? `
+              setGuestEmailOnCart(input: { cart_id: $cartId, email: $email }) {
+                cart { id }
+              }
+            `
+          : ``;
         return {
           query: `
             mutation SetShippingAddress($cartId: String!, $address: CartAddressInput!, $email: String!) {
-              setGuestEmailOnCart(input: { cart_id: $cartId, email: $email })
+              ${guestEmailMutation}
               setShippingAddressesOnCart(input: { cart_id: $cartId, shipping_addresses: [{ address: $address }] }) {
                 cart {
                   id
