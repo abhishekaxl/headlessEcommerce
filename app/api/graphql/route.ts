@@ -28,9 +28,14 @@ function parseCookies(request: NextRequest): Record<string, string> {
 
   if (cookieHeader) {
     cookieHeader.split(';').forEach((cookie) => {
-      const [name, value] = cookie.trim().split('=');
-      if (name && value) {
-        cookies[name] = decodeURIComponent(value);
+      const trimmed = cookie.trim();
+      if (!trimmed) return;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) return;
+      const name = trimmed.slice(0, eqIndex).trim();
+      const value = trimmed.slice(eqIndex + 1);
+      if (name) {
+        cookies[name] = decodeURIComponent(value || '');
       }
     });
   }
