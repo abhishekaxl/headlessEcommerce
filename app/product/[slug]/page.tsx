@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import { getProduct } from '@/lib/graphql/queries';
 import { ProductImageGallery } from '@/components/catalog/ProductImageGallery';
 import { ProductPurchasePanel } from '@/components/catalog/ProductPurchasePanel';
+import styles from './product.module.css';
 
 interface ProductPageProps {
   params: {
@@ -46,48 +47,49 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className={styles.page}>
+      <div className={styles.container}>
+      <div className={styles.grid}>
         {/* Product Images */}
-        <div>
+        <div className={styles.mediaCol}>
           <ProductImageGallery images={product.images} />
         </div>
 
         {/* Product Details */}
-        <div>
-          <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+        <div className={styles.detailsCol}>
+          <h1 className={styles.title}>{product.name}</h1>
           
           {product.sku && (
-            <p className="text-gray-600 mb-4">SKU: {product.sku}</p>
+            <p className={styles.sku}>SKU: {product.sku}</p>
           )}
 
           {/* Price */}
-          <div className="mb-6">
+          <div className={styles.priceBlock}>
             {product.price ? (
-              <p className="text-3xl font-bold">
+              <p className={styles.price}>
                 {product.price.formatted}
               </p>
             ) : product.priceRange ? (
-              <p className="text-3xl font-bold">
+              <p className={styles.price}>
                 {product.priceRange.min.formatted} - {product.priceRange.max.formatted}
               </p>
             ) : null}
             
             {product.specialPrice && (
-              <p className="text-lg text-gray-500 line-through">
+              <p style={{ color: 'var(--gray)', textDecoration: 'line-through', marginTop: 6 }}>
                 {product.price?.formatted}
               </p>
             )}
           </div>
 
           {/* Stock Status */}
-          <div className="mb-6">
+          <div className={styles.stock}>
             {product.inStock ? (
-              <span className="px-3 py-1 bg-green-100 text-green-800 rounded">
+              <span className={`${styles.badge} ${styles.inStock}`}>
                 In Stock
               </span>
             ) : (
-              <span className="px-3 py-1 bg-red-100 text-red-800 rounded">
+              <span className={`${styles.badge} ${styles.outStock}`}>
                 Out of Stock
               </span>
             )}
@@ -96,18 +98,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Description */}
           {product.description && (
             <div
-              className="mb-6 prose"
+              className={styles.description}
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
           )}
 
           {/* Configurable Options */}
           {product.configurableOptions && product.configurableOptions.length > 0 && (
-            <ProductPurchasePanel product={product} />
+            <div className={styles.purchase}>
+              <ProductPurchasePanel product={product} />
+            </div>
           )}
 
           {/* Add to Cart */}
-          <div className="mt-8">
+          <div className={styles.purchase}>
             {(!product.configurableOptions || product.configurableOptions.length === 0) && (
               <ProductPurchasePanel product={product} />
             )}
@@ -117,25 +121,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {/* Related Products */}
       {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Related Products</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className={styles.related}>
+          <h2 className={styles.relatedTitle}>Related Products</h2>
+          <div className={styles.relatedGrid}>
             {product.relatedProducts.map((relatedProduct) => (
               <a
                 key={relatedProduct.id}
                 href={`/product/${relatedProduct.slug}`}
-                className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
+                className={styles.relatedCard}
               >
                 {relatedProduct.images[0] && (
                   <img
                     src={relatedProduct.images[0].url}
                     alt={relatedProduct.images[0].alt || relatedProduct.name}
-                    className="w-full h-48 object-cover mb-2"
+                    className={styles.relatedImg}
                   />
                 )}
-                <h3 className="font-medium">{relatedProduct.name}</h3>
+                <h3 className={styles.relatedName}>{relatedProduct.name}</h3>
                 {relatedProduct.price && (
-                  <p className="text-lg font-bold mt-2">
+                  <p className={styles.relatedPrice}>
                     {relatedProduct.price.formatted}
                   </p>
                 )}
@@ -144,6 +148,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

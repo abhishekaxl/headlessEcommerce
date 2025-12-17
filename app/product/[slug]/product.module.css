@@ -1,0 +1,149 @@
+.page {
+  padding: 60px 24px;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.mediaCol {
+  position: sticky;
+  top: 110px;
+}
+
+.detailsCol {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  margin: 0 0 10px 0;
+  color: var(--black);
+}
+
+.sku {
+  color: var(--dark-gray);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.priceBlock {
+  margin-bottom: 18px;
+}
+
+.price {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--black);
+}
+
+.stock {
+  margin-bottom: 18px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.inStock {
+  background: rgba(74, 124, 89, 0.12);
+  color: var(--primary);
+}
+
+.outStock {
+  background: rgba(220, 53, 69, 0.12);
+  color: #dc3545;
+}
+
+.description {
+  margin-bottom: 22px;
+  color: var(--charcoal);
+}
+
+.purchase {
+  margin-top: 18px;
+}
+
+.related {
+  margin-top: 64px;
+}
+
+.relatedTitle {
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  margin: 0 0 18px 0;
+  color: var(--black);
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.relatedCard {
+  border: 1px solid var(--light-gray);
+  background: var(--white);
+  padding: 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.relatedCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+}
+
+.relatedImg {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  background: var(--cream);
+}
+
+.relatedName {
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.relatedPrice {
+  font-weight: 800;
+  color: var(--black);
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .mediaCol {
+    position: static;
+    max-width: 520px;
+  }
+  .relatedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .relatedGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
