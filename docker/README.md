@@ -22,7 +22,7 @@ cd headlessEcommerce
 
 ```bash
 cd docker
-docker-compose up -d
+docker compose up -d
 ```
 
 This will start:
@@ -38,7 +38,7 @@ This will start:
 First-time setup takes 10-15 minutes. Check progress:
 
 ```bash
-docker-compose logs -f magento
+docker compose logs -f magento
 ```
 
 Wait until you see "Magento installation finished successfully".
@@ -65,8 +65,10 @@ MAGENTO_ADMIN_USER=admin
 MAGENTO_ADMIN_PASSWORD=Admin@123
 
 # Next.js
-NEXT_PUBLIC_MAGENTO_URL=http://localhost:8080
+MAGENTO_GRAPHQL_URL=http://localhost:8080/graphql
+MAGENTO_STORE_CODE=default
 NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_GRAPHQL_ENDPOINT=/api/graphql
 ```
 
 ### Enable GraphQL in Magento
@@ -87,22 +89,22 @@ bin/magento cache:flush
 
 ### Start Services
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Stop Services
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### View Logs
 ```bash
-docker-compose logs -f [service_name]
+docker compose logs -f [service_name]
 ```
 
 ### Restart a Service
 ```bash
-docker-compose restart magento
+docker compose restart magento
 ```
 
 ### Access Magento CLI
@@ -112,13 +114,30 @@ docker exec -it headless-magento bin/magento [command]
 
 ### Rebuild Frontend
 ```bash
-docker-compose build frontend
-docker-compose up -d frontend
+docker compose build frontend
+docker compose up -d frontend
 ```
 
-## Sample Data
+## Adobe Credentials & Sample Data
 
-To install Magento sample data:
+### Docker Image
+This project uses the `bitnami/magento` Docker image, which is **publicly available** on Docker Hub. You do **not** need Adobe/Magento credentials to pull and run the container.
+
+### Sample Data & Extensions
+However, installing **Sample Data** (`bin/magento sampledata:deploy`) or other extensions via Composer requires authentication with the Adobe Commerce Marketplace.
+
+If you encounter authentication errors during sample data deployment:
+
+1.  Get your keys from [Adobe Commerce Marketplace](https://commercemarketplace.adobe.com/customer/accessKeys/).
+2.  Create an `auth.json` file in the Magento root (inside the container) or pass credentials when prompted.
+
+To install Magento sample data automatically, run the helper script:
+
+```bash
+./deploy-sample-data.sh
+```
+
+Or manually:
 
 ```bash
 docker exec -it headless-magento bash
@@ -132,7 +151,7 @@ bin/magento cache:flush
 ## Troubleshooting
 
 ### Elasticsearch Memory Error
-Increase Docker memory to at least 4GB, or add to docker-compose.yml:
+Increase Docker memory to at least 4GB, or add to docker compose.yml:
 ```yaml
 elasticsearch:
   environment:
@@ -142,19 +161,19 @@ elasticsearch:
 ### Magento 503 Error
 Wait for installation to complete, or check logs:
 ```bash
-docker-compose logs magento
+docker compose logs magento
 ```
 
 ### Database Connection Error
 Ensure MySQL is running:
 ```bash
-docker-compose ps mysql
+docker compose ps mysql
 ```
 
 ### Clear All Data (Fresh Start)
 ```bash
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ## Production Deployment
