@@ -6,6 +6,12 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
+        port: '8080',
+        pathname: '/media/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
         port: '80',
       },
       {
@@ -13,6 +19,7 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+    unoptimized: false,
   },
   // Environment variables
   env: {
@@ -23,7 +30,7 @@ const nextConfig = {
     return [
       {
         source: '/media/:path*',
-        destination: 'http://localhost/media/:path*',
+        destination: 'http://localhost:8080/media/:path*',
       },
     ];
   },

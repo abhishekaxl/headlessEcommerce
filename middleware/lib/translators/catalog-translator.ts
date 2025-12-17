@@ -18,6 +18,28 @@ export class CatalogTranslator extends BaseTranslator {
     return 'SIMPLE';
   }
 
+  /**
+   * Normalize image URL - convert relative URLs to absolute
+   */
+  private normalizeImageUrl(url: string | undefined | null): string {
+    if (!url) return '';
+    
+    // If already absolute URL, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Get base URL from environment or default
+    const baseUrl = process.env.MAGENTO_GRAPHQL_URL 
+      ? process.env.MAGENTO_GRAPHQL_URL.replace('/graphql', '')
+      : 'http://localhost:8080';
+    
+    // Remove leading slash if present (we'll add it)
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    return `${baseUrl}${cleanUrl}`;
+  }
+
   translate(
     operationName: string,
     variables: Record<string, unknown>,
@@ -505,7 +527,7 @@ export class CatalogTranslator extends BaseTranslator {
           ...(item.image
             ? [
                 {
-                  url: item.image.url,
+                  url: this.normalizeImageUrl(item.image.url),
                   alt: item.image.label || item.name || '',
                   type: 'image',
                 },
@@ -590,7 +612,7 @@ export class CatalogTranslator extends BaseTranslator {
               images: item.image
                 ? [
                     {
-                      url: item.image.url,
+                      url: this.normalizeImageUrl(item.image.url),
                       alt: item.image.label || item.name || '',
                     },
                   ]
@@ -755,7 +777,7 @@ export class CatalogTranslator extends BaseTranslator {
               images: item.image
                 ? [
                     {
-                      url: item.image.url,
+                      url: this.normalizeImageUrl(item.image.url),
                       alt: item.image.label || item.name || '',
                     },
                   ]
