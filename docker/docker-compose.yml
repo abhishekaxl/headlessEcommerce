@@ -1,5 +1,5 @@
 services:
-  # Magento 2 with custom PHP-FPM
+  # Magento 2 with auto-installation
   magento:
     build:
       context: .
@@ -9,17 +9,23 @@ services:
     working_dir: /var/www/html
     volumes:
       - magento_data:/var/www/html
+      - ./auth.json:/root/.composer/auth.json:ro
     environment:
       - MAGENTO_DATABASE_HOST=mysql
       - MAGENTO_DATABASE_NAME=magento
       - MAGENTO_DATABASE_USER=magento
       - MAGENTO_DATABASE_PASSWORD=magento
+      - MAGENTO_ADMIN_USER=admin
+      - MAGENTO_ADMIN_PASSWORD=Admin@123
+      - MAGENTO_ADMIN_EMAIL=admin@example.com
+      - MAGENTO_BASE_URL=http://localhost:8080
       - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
     depends_on:
       mysql:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -59,11 +65,12 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 60s
     networks:
       - headless-network
 
-  # Elasticsearch (required for Magento 2.4+)
+  # Elasticsearch
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
     platform: linux/amd64
@@ -77,6 +84,12 @@ services:
       - xpack.security.enabled=false
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     networks:
       - headless-network
 
