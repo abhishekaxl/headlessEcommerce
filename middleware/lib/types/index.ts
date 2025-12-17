@@ -90,6 +90,7 @@ export interface RequestContext {
   storeCode: string;
   locale: string;
   currency: string;
+  operationName?: string;
   customerToken?: string;
   cartToken?: string;
   ipAddress?: string;

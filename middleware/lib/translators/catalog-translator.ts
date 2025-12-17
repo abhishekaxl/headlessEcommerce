@@ -460,11 +460,12 @@ export class CatalogTranslator extends BaseTranslator {
 
     const data = magentoData as Record<string, unknown>;
 
-    // Handle products from products query FIRST (ProductsByCategory)
-    // This comes from the products query with category_id filter
+    // Handle products from Magento `products(...)` query.
+    // This can represent GetProduct, SearchProducts, or fallback ProductsByCategory via products(filter: category_id).
     if (data.products && typeof data.products === 'object') {
       const productsData = data.products as {
         items?: Array<{
+          __typename?: string;
           sku: string;
           name: string;
           url_key: string;
@@ -489,6 +490,102 @@ export class CatalogTranslator extends BaseTranslator {
         };
         total_count?: number;
       };
+
+      // If this was GetProduct, return a single product object
+      if (context.operationName === 'GetProduct') {
+        const item: any = (productsData.items || [])[0];
+        if (!item) {
+          return { product: null };
+        }
+
+        return {
+          product: {
+            id: item.sku || '',
+            sku: item.sku || '',
+            name: item.name || '',
+            slug: item.url_key || '',
+            description: item.description?.html || null,
+            shortDescription: item.short_description?.html || null,
+            price: item.price_range?.minimum_price?.final_price
+              ? {
+                  amount: item.price_range.minimum_price.final_price.value,
+                  currency: item.price_range.minimum_price.final_price.currency,
+                  formatted: `${item.price_range.minimum_price.final_price.currency} ${item.price_range.minimum_price.final_price.value.toFixed(2)}`,
+                }
+              : null,
+            priceRange: null,
+            specialPrice: null,
+            images: item.image
+              ? [
+                  {
+                    url: item.image.url,
+                    alt: item.image.label || item.name || '',
+                    type: 'image',
+                  },
+                ]
+              : [],
+            type: this.mapProductType(item.__typename),
+            stockStatus: item.stock_status || 'OUT_OF_STOCK',
+            inStock: item.stock_status === 'IN_STOCK',
+            quantity: null,
+            attributes: [],
+            configurableOptions: [],
+            relatedProducts: [],
+            metaTitle: null,
+            metaDescription: null,
+            canonicalUrl: item.url_key ? `/product/${item.url_key}` : null,
+          },
+        };
+      }
+
+      // If this was SearchProducts, return searchProducts connection
+      if (context.operationName === 'SearchProducts') {
+        return {
+          searchProducts: {
+            items: (productsData.items || []).map((item: any) => ({
+              id: item.sku || '',
+              sku: item.sku || '',
+              name: item.name || '',
+              slug: item.url_key || '',
+              type: this.mapProductType(item.__typename),
+              price: item.price_range?.minimum_price?.final_price
+                ? {
+                    amount: item.price_range.minimum_price.final_price.value,
+                    currency: item.price_range.minimum_price.final_price.currency,
+                    formatted: `${item.price_range.minimum_price.final_price.currency} ${item.price_range.minimum_price.final_price.value.toFixed(2)}`,
+                  }
+                : null,
+              images: item.image
+                ? [
+                    {
+                      url: item.image.url,
+                      alt: item.image.label || item.name || '',
+                    },
+                  ]
+                : [],
+              inStock: item.stock_status === 'IN_STOCK',
+              stockStatus: item.stock_status || 'OUT_OF_STOCK',
+            })),
+            pageInfo: productsData.page_info
+              ? {
+                  hasNextPage:
+                    (productsData.page_info.current_page || 0) < (productsData.page_info.total_pages || 0),
+                  hasPreviousPage: (productsData.page_info.current_page || 0) > 1,
+                  startCursor: undefined,
+                  endCursor: undefined,
+                  totalCount: productsData.total_count || 0,
+                }
+              : {
+                  hasNextPage: false,
+                  hasPreviousPage: false,
+                  startCursor: undefined,
+                  endCursor: undefined,
+                  totalCount: productsData.total_count || 0,
+                },
+            totalCount: productsData.total_count || 0,
+          },
+        };
+      }
 
       return {
         productsByCategory: {

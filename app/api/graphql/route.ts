@@ -196,6 +196,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Make operation name available to translators during normalization
+    context.operationName = operationName;
+
     // Check if operation is allowed
     if (!isOperationAllowed(operationName)) {
       const allowedOps = getAllowedOperations().join(', ');
