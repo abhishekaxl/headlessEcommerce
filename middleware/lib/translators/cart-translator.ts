@@ -305,7 +305,7 @@ export class CartTranslator extends BaseTranslator {
             mutation AddToCart($cartId: String!, $sku: String!, $qty: Float!) {
               addProductsToCart(
                 cartId: $cartId
-                cartItems: [{ data: { sku: $sku, qty: $qty } }]
+                cartItems: [{ sku: $sku, quantity: $qty }]
               ) {
                 cart {
                   id
