@@ -1,6 +1,6 @@
 # GraphQL Normalization Gateway (Middleware)
 
-यह middleware layer canonical GraphQL API expose करता है और Magento GraphQL API के साथ communicate करता है।
+This middleware layer exposes a canonical GraphQL API and communicates with the Magento GraphQL API.
 
 ## Structure
 
@@ -56,7 +56,7 @@ METRICS_ENABLED=true
 
 ## Usage
 
-Middleware `/api/graphql` endpoint पर available है।
+Middleware is available at the `/api/graphql` endpoint.
 
 ### Example Request
 
