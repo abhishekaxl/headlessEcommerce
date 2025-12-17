@@ -6,3 +6,4 @@ export { Price } from './Price';
 export { Icon } from './Icon';
 export { Image } from './Image';
 
+

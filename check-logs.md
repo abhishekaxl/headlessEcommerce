@@ -52,3 +52,4 @@ cd /Users/abhishekdhariwal/Sites/headless-ecommerce-portal && npm run dev
 Then open `http://localhost:3000/category/gear` in your browser and watch the terminal output.
 
 
+

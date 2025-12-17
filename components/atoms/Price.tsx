@@ -46,3 +46,4 @@ export const Price: React.FC<PriceProps> = ({
 
 export default Price;
 
+

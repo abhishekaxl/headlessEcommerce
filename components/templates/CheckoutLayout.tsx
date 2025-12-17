@@ -131,3 +131,4 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
 
 export default CheckoutLayout;
 
+
