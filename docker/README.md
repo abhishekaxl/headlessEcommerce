@@ -26,7 +26,7 @@ docker compose up -d
 ```
 
 This will start:
-- **Magento 2** (Backend) - http://localhost:8080
+- **Magento 2** (Backend) - http://localhost:8080 (using bitnami/magento:2.4)
 - **Next.js** (Frontend) - http://localhost:3000
 - **MySQL** - localhost:3306
 - **Elasticsearch** - localhost:9200

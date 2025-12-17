@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # Magento 2 Backend
   magento:
-    image: bitnami/magento:2.4.7
+    image: bitnami/magento:2.4
     container_name: headless-magento
     ports:
       - "8080:8080"
