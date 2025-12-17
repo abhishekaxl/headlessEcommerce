@@ -108,16 +108,26 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
     SAMPLEDATA_EXIT=$?
     set -e  # Re-enable exit on error
     
-    if [ $SAMPLEDATA_EXIT -eq 0 ] || echo "$SAMPLEDATA_OUTPUT" | grep -q "already deployed\|already exists"; then
+    if [ $SAMPLEDATA_EXIT -eq 0 ] || echo "$SAMPLEDATA_OUTPUT" | grep -q "already deployed\|already exists\|Sample data modules have been enabled"; then
         echo "$SAMPLEDATA_OUTPUT"
+        echo "Running setup:upgrade..."
         bin/magento setup:upgrade
         echo "Reindexing catalog..."
         bin/magento indexer:reindex
         bin/magento cache:flush
         echo "Sample data installed successfully!"
+        
+        # Verify products were created
+        PRODUCT_COUNT=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" --skip-ssl "$DB_NAME" -sN -e "SELECT COUNT(*) FROM catalog_product_entity;" 2>/dev/null || echo "0")
+        echo "Products in database: $PRODUCT_COUNT"
     else
         echo "$SAMPLEDATA_OUTPUT"
-        echo "Warning: Sample data installation had issues, continuing anyway..."
+        echo "Warning: Sample data installation had issues. Trying alternative method..."
+        # Try alternative: enable sample data modules manually
+        bin/magento module:enable Magento_SampleData || true
+        bin/magento setup:upgrade || true
+        bin/magento indexer:reindex || true
+        bin/magento cache:flush || true
     fi
     
     # Deploy static content for CSS/JS
