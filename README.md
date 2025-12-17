@@ -81,6 +81,9 @@ docker compose down -v && docker compose up -d
 
 # Access Magento CLI
 docker exec headless-magento bin/magento [command]
+
+# Fix CSS/JS issues (if frontend/admin looks broken)
+cd docker && ./fix-static-content.sh
 ```
 
 ## Tech Stack
