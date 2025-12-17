@@ -123,7 +123,7 @@ function normalizeCheckoutFromCart(cart: any) {
           street1: Array.isArray(a.street) ? a.street[0] || '' : a.street || '',
           street2: Array.isArray(a.street) ? a.street[1] || undefined : undefined,
           city: a.city || '',
-          state: a.region?.code || a.region?.region || '',
+          state: a.region?.code || a.region?.label || '',
           postalCode: a.postcode || '',
           country: a.country?.code || a.country_code || 'US',
           phone: a.telephone || '',
@@ -271,7 +271,7 @@ export class CartTranslator extends BaseTranslator {
                   company
                   street
                   city
-                  region { code region }
+                  region { code label }
                   postcode
                   country { code }
                   telephone
@@ -282,7 +282,7 @@ export class CartTranslator extends BaseTranslator {
                   company
                   street
                   city
-                  region { code region }
+                  region { code label }
                   postcode
                   country { code }
                   telephone
@@ -430,7 +430,7 @@ export class CartTranslator extends BaseTranslator {
                 cart {
                   id
                   shipping_addresses {
-                    firstname lastname company street city region { code region } postcode country { code } telephone
+                    firstname lastname company street city region { code label } postcode country { code } telephone
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                   }
@@ -471,10 +471,10 @@ export class CartTranslator extends BaseTranslator {
                 cart {
                   id
                   billing_address {
-                    firstname lastname company street city region { code region } postcode country { code } telephone
+                    firstname lastname company street city region { code label } postcode country { code } telephone
                   }
                   shipping_addresses {
-                    firstname lastname company street city region { code region } postcode country { code } telephone
+                    firstname lastname company street city region { code label } postcode country { code } telephone
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                   }
@@ -517,7 +517,7 @@ export class CartTranslator extends BaseTranslator {
                   shipping_addresses {
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
                     available_shipping_methods { carrier_code method_code carrier_title method_title amount { value currency } }
-                    firstname lastname company street city region { code region } postcode country { code } telephone
+                    firstname lastname company street city region { code label } postcode country { code } telephone
                   }
                   available_payment_methods { code title }
                   selected_payment_method { code title }
@@ -545,9 +545,9 @@ export class CartTranslator extends BaseTranslator {
                   selected_payment_method { code title }
                   shipping_addresses {
                     selected_shipping_method { carrier_code method_code carrier_title method_title amount { value currency } }
-                    firstname lastname company street city region { code region } postcode country { code } telephone
+                    firstname lastname company street city region { code label } postcode country { code } telephone
                   }
-                  billing_address { firstname lastname company street city region { code region } postcode country { code } telephone }
+                  billing_address { firstname lastname company street city region { code label } postcode country { code } telephone }
                   items { id quantity product { sku name url_key image { url label } } prices { price { value currency } row_total { value currency } } }
                   prices { grand_total { value currency } subtotal_excluding_tax { value currency } }
                   applied_coupons { code }
