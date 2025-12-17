@@ -19,6 +19,7 @@ interface Product {
   sku: string;
   name: string;
   slug: string;
+  type?: string;
   price?: {
     amount: number;
     currency: string;
@@ -83,7 +84,7 @@ export default function CategoryPage() {
           body: JSON.stringify({
             query: `query ProductsByCategory($categorySlug: String!, $pagination: PaginationInput) {
               productsByCategory(categorySlug: $categorySlug, pagination: $pagination) {
-                items { id sku name slug price { amount currency formatted } images { url alt } inStock stockStatus }
+                items { id sku name slug type price { amount currency formatted } images { url alt } inStock stockStatus }
               }
             }`,
             variables: { categorySlug: slug, pagination: { limit: 12 } },

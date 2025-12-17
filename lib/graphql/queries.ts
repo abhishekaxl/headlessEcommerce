@@ -128,6 +128,7 @@ export async function getProductsByCategory(
               sku
               name
               slug
+              type
               price {
                 amount
                 currency
@@ -361,6 +362,7 @@ export async function searchProducts(
             sku
             name
             slug
+              type
             price {
               amount
               currency

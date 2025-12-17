@@ -8,6 +8,16 @@ import { RequestContext } from '../types';
 import { MagentoGraphQLRequest } from '../magento/client';
 
 export class CatalogTranslator extends BaseTranslator {
+  private mapProductType(typename: unknown): string {
+    const t = typeof typename === 'string' ? typename : '';
+    if (t.includes('Configurable')) return 'CONFIGURABLE';
+    if (t.includes('Bundle')) return 'BUNDLE';
+    if (t.includes('Grouped')) return 'GROUPED';
+    if (t.includes('Virtual')) return 'VIRTUAL';
+    if (t.includes('Downloadable')) return 'DOWNLOADABLE';
+    return 'SIMPLE';
+  }
+
   translate(
     operationName: string,
     variables: Record<string, unknown>,
@@ -229,6 +239,7 @@ export class CatalogTranslator extends BaseTranslator {
                 sort: $sort
               ) {
                 items {
+                  __typename
                   sku
                   name
                   url_key
@@ -272,6 +283,7 @@ export class CatalogTranslator extends BaseTranslator {
                 currentPage: $currentPage
               ) {
                 items {
+                  __typename
                   sku
                   name
                   url_key
@@ -361,6 +373,7 @@ export class CatalogTranslator extends BaseTranslator {
             sort: $sort
           ) {
             items {
+              __typename
               sku
               name
               url_key
@@ -484,6 +497,7 @@ export class CatalogTranslator extends BaseTranslator {
             sku: item.sku || '',
             name: item.name || '',
             slug: item.url_key || '',
+            type: this.mapProductType(item.__typename),
             price: item.price_range?.minimum_price?.final_price
               ? {
                   amount: item.price_range.minimum_price.final_price.value,
@@ -601,6 +615,7 @@ export class CatalogTranslator extends BaseTranslator {
               sku: item.sku || '',
               name: item.name || '',
               slug: item.url_key || '',
+              type: this.mapProductType(item.__typename),
               price: item.price_range?.minimum_price?.final_price
                 ? {
                     amount: item.price_range.minimum_price.final_price.value,

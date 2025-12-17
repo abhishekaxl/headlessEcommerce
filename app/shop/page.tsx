@@ -19,7 +19,7 @@ export default function ShopPage() {
           body: JSON.stringify({
             query: `query ProductsByCategory($categorySlug: String!, $pagination: PaginationInput) {
               productsByCategory(categorySlug: $categorySlug, pagination: $pagination) {
-                items { id sku name slug price { amount currency formatted } images { url alt } inStock stockStatus }
+                items { id sku name slug type price { amount currency formatted } images { url alt } inStock stockStatus }
               }
             }`,
             variables: { categorySlug: 'gear', pagination: { limit: 12 } },

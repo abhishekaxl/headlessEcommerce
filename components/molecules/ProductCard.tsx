@@ -11,6 +11,7 @@ interface Product {
   sku: string;
   name: string;
   slug: string;
+  type?: string;
   price?: {
     amount: number;
     currency: string;
@@ -34,11 +35,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   const imageUrl = product.images?.[0]?.url || PLACEHOLDER;
   const rating = product.rating || 4.5;
   const fullStars = Math.floor(rating);
+  const needsOptions = !!product.type && product.type !== 'SIMPLE';
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!product.inStock || adding) return;
+    if (adding) return;
+    if (needsOptions) {
+      router.push(`/product/${product.slug}`);
+      return;
+    }
+    if (!product.inStock) return;
 
     try {
       setAdding(true);
@@ -50,7 +57,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
         router.refresh();
       }
     } catch (err) {
-      console.error('Failed to add to cart:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Failed to add to cart:', msg);
+      // If Magento requires options, redirect user to product page to select them
+      if (msg.toLowerCase().includes('choose options')) {
+        router.push(`/product/${product.slug}`);
+      }
     } finally {
       setAdding(false);
     }
@@ -100,9 +112,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
           <button
             className="add-to-cart-btn"
             onClick={handleAddToCart}
-            disabled={!product.inStock || adding}
+            disabled={adding || (!needsOptions && !product.inStock)}
           >
-            {adding ? 'Adding...' : 'Add to cart'}
+            {adding ? 'Adding...' : needsOptions ? 'Select options' : 'Add to cart'}
           </button>
         </div>
       </Link>

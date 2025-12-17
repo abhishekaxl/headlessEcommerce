@@ -430,6 +430,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                       currentPage: $currentPage
                     ) {
                       items {
+                        __typename
                         sku
                         name
                         url_key
