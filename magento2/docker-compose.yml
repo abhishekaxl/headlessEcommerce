@@ -1,0 +1,136 @@
+# Docker Compose v2 format (no version needed)
+
+services:
+  # Magento 2 Application
+  magento:
+    build:
+      context: ./docker/magento
+      dockerfile: Dockerfile
+    container_name: magento2_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./docker/magento/php.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./docker/magento/php-fpm.conf:/usr/local/etc/php-fpm.d/www.conf
+    ports:
+      - "8080:80"
+    environment:
+      - PHP_MEMORY_LIMIT=2G
+      - PHP_UPLOAD_MAX_FILESIZE=64M
+      - PHP_POST_MAX_SIZE=64M
+    depends_on:
+      - db
+      - redis
+      - elasticsearch
+    networks:
+      - magento-network
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: magento2_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - magento
+    networks:
+      - magento-network
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: magento2_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: magento
+      MYSQL_USER: magento
+      MYSQL_PASSWORD: magento
+    ports:
+      - "3306:3306"
+    volumes:
+      - magento_db_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - magento-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: magento2_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - magento_redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - magento-network
+
+  # Elasticsearch (for search)
+  # Note: Using platform emulation for ARM64 compatibility
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    platform: linux/amd64
+    container_name: magento2_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - magento_elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - magento-network
+
+  # phpMyAdmin (optional, for database management)
+  # Note: Using platform emulation as phpMyAdmin doesn't have native ARM64 support
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    platform: linux/amd64
+    container_name: magento2_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - magento-network
+
+  # MailHog (for email testing in development)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: magento2_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI port
+    networks:
+      - magento-network
+
+volumes:
+  magento_db_data:
+  magento_redis_data:
+  magento_elasticsearch_data:
+
+networks:
+  magento-network:
+    driver: bridge
+
