@@ -10,9 +10,29 @@ export function ProceedToCheckoutButton() {
   return (
     <Link
       href="/checkout"
-      className="block w-full text-center px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+      className="btn"
     >
       Proceed to Checkout
+      <style jsx>{`
+        .btn {
+          display: block;
+          width: 100%;
+          text-align: center;
+          padding: 14px 20px;
+          background: var(--primary);
+          color: var(--white);
+          font-family: var(--font-body);
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          text-decoration: none;
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .btn:hover {
+          background: var(--primary-dark);
+          transform: translateY(-2px);
+        }
+      `}</style>
     </Link>
   );
 }

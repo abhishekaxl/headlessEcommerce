@@ -59,55 +59,55 @@ export function CartItems({ items }: CartItemsProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="cart-items">
       {items.map((item) => {
         const isUpdating = updatingItems.has(item.id);
+        const imageUrl = item.product.images?.[0]?.url;
+        const imageAlt = item.product.images?.[0]?.alt || item.product.name;
 
         return (
-          <div
-            key={item.id}
-            className="flex gap-4 p-4 border rounded-lg"
-          >
-            {/* Product Image */}
-            {item.product.images[0] && (
-              <Link href={`/product/${item.product.slug}`} className="flex-shrink-0">
-                <div className="relative w-24 h-24 bg-gray-100 rounded">
+          <div key={item.id} className="cart-item">
+            <div className="item-media">
+              <Link href={`/product/${item.product.slug || ''}`} className="image-link">
+                {imageUrl ? (
                   <Image
-                    src={item.product.images[0].url}
-                    alt={item.product.images[0].alt || item.product.name}
-                    fill
-                    className="object-cover rounded"
-                    sizes="96px"
+                    src={imageUrl}
+                    alt={imageAlt}
+                    width={96}
+                    height={96}
+                    className="item-image"
                   />
-                </div>
+                ) : (
+                  <div className="item-image placeholder">No Image</div>
+                )}
               </Link>
-            )}
+            </div>
 
-            {/* Product Details */}
-            <div className="flex-1">
-              <Link href={`/product/${item.product.slug}`}>
-                <h3 className="font-medium hover:text-blue-600">{item.product.name}</h3>
+            <div className="item-details">
+              <Link href={`/product/${item.product.slug || ''}`} className="item-name">
+                {item.product.name || 'Product'}
               </Link>
-              {item.product.sku && (
-                <p className="text-sm text-gray-600">SKU: {item.product.sku}</p>
-              )}
+              {item.product.sku ? <div className="item-sku">SKU: {item.product.sku}</div> : null}
 
-              {/* Quantity Controls */}
-              <div className="mt-4 flex items-center gap-4">
-                <label className="text-sm">Quantity:</label>
-                <div className="flex items-center gap-2">
+              <div className="qty-row">
+                <span className="qty-label">Quantity</span>
+                <div className="qty-controls">
                   <button
+                    type="button"
                     onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                     disabled={isUpdating || item.quantity <= 1}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
+                    className="qty-btn"
+                    aria-label="Decrease quantity"
                   >
-                    -
+                    −
                   </button>
-                  <span className="w-12 text-center">{item.quantity}</span>
+                  <span className="qty-value">{item.quantity}</span>
                   <button
+                    type="button"
                     onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                     disabled={isUpdating}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
+                    className="qty-btn"
+                    aria-label="Increase quantity"
                   >
                     +
                   </button>
@@ -115,13 +115,13 @@ export function CartItems({ items }: CartItemsProps) {
               </div>
             </div>
 
-            {/* Price and Remove */}
-            <div className="flex flex-col items-end justify-between">
-              <p className="font-bold">{item.rowTotal.formatted}</p>
+            <div className="item-actions">
+              <div className="item-price">{item.rowTotal.formatted}</div>
               <button
+                type="button"
                 onClick={() => handleRemoveItem(item.id)}
                 disabled={isUpdating}
-                className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                className="remove-btn"
               >
                 Remove
               </button>
@@ -129,6 +129,160 @@ export function CartItems({ items }: CartItemsProps) {
           </div>
         );
       })}
+
+      <style jsx>{`
+        .cart-items {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .cart-item {
+          display: grid;
+          grid-template-columns: 120px 1fr 140px;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid var(--light-gray);
+          background: var(--white);
+          align-items: center;
+        }
+
+        .item-media {
+          width: 120px;
+        }
+
+        .image-link {
+          display: inline-block;
+        }
+
+        :global(.item-image) {
+          border-radius: 8px;
+          background: var(--cream);
+          object-fit: cover;
+        }
+
+        .placeholder {
+          width: 96px;
+          height: 96px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--gray);
+          font-size: 12px;
+          border-radius: 8px;
+          background: var(--cream);
+        }
+
+        .item-details {
+          min-width: 0;
+        }
+
+        .item-name {
+          display: inline-block;
+          font-family: var(--font-body);
+          font-weight: 600;
+          color: var(--black);
+          text-decoration: none;
+          margin-bottom: 6px;
+        }
+
+        .item-name:hover {
+          color: var(--primary);
+        }
+
+        .item-sku {
+          font-size: 13px;
+          color: var(--dark-gray);
+          margin-bottom: 12px;
+        }
+
+        .qty-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .qty-label {
+          font-size: 13px;
+          color: var(--dark-gray);
+          width: 70px;
+        }
+
+        .qty-controls {
+          display: inline-flex;
+          align-items: center;
+          border: 1px solid var(--light-gray);
+        }
+
+        .qty-btn {
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: var(--white);
+          cursor: pointer;
+          font-size: 18px;
+          color: var(--charcoal);
+        }
+
+        .qty-btn:hover {
+          background: var(--off-white);
+        }
+
+        .qty-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .qty-value {
+          width: 44px;
+          text-align: center;
+          font-weight: 600;
+          color: var(--black);
+        }
+
+        .item-actions {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 10px;
+        }
+
+        .item-price {
+          font-weight: 700;
+          color: var(--black);
+        }
+
+        .remove-btn {
+          border: none;
+          background: transparent;
+          color: #dc3545;
+          font-size: 13px;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .remove-btn:hover {
+          text-decoration: underline;
+        }
+
+        .remove-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 900px) {
+          .cart-item {
+            grid-template-columns: 96px 1fr;
+            grid-template-rows: auto auto;
+          }
+          .item-actions {
+            grid-column: 1 / -1;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }
