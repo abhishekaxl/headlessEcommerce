@@ -43,6 +43,32 @@ export async function mergeGuestCartToCustomer(
 }
 
 /**
+ * Validate cart exists in Magento
+ */
+async function validateCartExists(cartId: string, context: RequestContext): Promise<boolean> {
+  try {
+    const result = await executeMagentoGraphQL<{ cart?: { id?: string } }>(
+      {
+        query: `
+          query ValidateCart($cartId: String!) {
+            cart(cart_id: $cartId) {
+              id
+            }
+          }
+        `,
+        variables: { cartId },
+        operationName: 'ValidateCart',
+      },
+      context
+    );
+    return !!result.data?.cart?.id;
+  } catch (error) {
+    // Cart doesn't exist or invalid
+    return false;
+  }
+}
+
+/**
  * Get or create cart token
  * Returns existing cart token or creates a new one
  */
@@ -51,7 +77,15 @@ export async function getOrCreateCartToken(
 ): Promise<string | undefined> {
   // If customer is logged in, use customer cart
   if (context.customerToken) {
-    if (context.cartToken) return context.cartToken;
+    if (context.cartToken) {
+      // Validate existing cart token first
+      const isValid = await validateCartExists(context.cartToken, context);
+      if (isValid) {
+        return context.cartToken;
+      }
+      // Invalid cart token, clear it and create new one
+      context.cartToken = undefined;
+    }
 
     // Magento: customerCart returns the active cart id for authenticated users
     const result = await executeMagentoGraphQL<{ customerCart?: { id?: string } }>(
@@ -77,9 +111,15 @@ export async function getOrCreateCartToken(
     return undefined;
   }
 
-  // For guest users, use or create guest cart token
+  // For guest users, validate existing token or create new one
   if (context.cartToken) {
-    return context.cartToken;
+    // Validate existing cart token first
+    const isValid = await validateCartExists(context.cartToken, context);
+    if (isValid) {
+      return context.cartToken;
+    }
+    // Invalid cart token, clear it and create new one
+    context.cartToken = undefined;
   }
 
   // Magento: createEmptyCart returns a new guest cart id
