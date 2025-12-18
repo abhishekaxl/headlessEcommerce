@@ -85,17 +85,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
       // Show user-friendly error message
       alert(`Unable to add to cart: ${msg}`);
       
-      // If Magento requires options or product not available, redirect to product page
+      // Handle different error types
+      const errorLower = msg.toLowerCase();
       if (
-        msg.toLowerCase().includes('choose options') || 
-        msg.toLowerCase().includes('specify') ||
-        msg.toLowerCase().includes('required') ||
-        msg.toLowerCase().includes('not available') ||
-        msg.toLowerCase().includes('requested product')
+        errorLower.includes('choose options') || 
+        errorLower.includes('specify the quantity') ||
+        errorLower.includes('specify') ||
+        errorLower.includes('required') ||
+        errorLower.includes('product requires options')
       ) {
-        // If it's a GROUPED/CONFIGURABLE/BUNDLE, redirect to product page for options
-        if (needsOptions) {
+        // Product requires options - redirect to product page
+        router.push(`/product/${product.slug}`);
+      } else if (
+        errorLower.includes('not available') ||
+        errorLower.includes('requested product') ||
+        errorLower.includes('not found')
+      ) {
+        // Product not available - might be GROUPED product being added directly
+        // Check if it's a GROUPED/CONFIGURABLE/BUNDLE and redirect
+        if (product.type && (product.type === 'GROUPED' || product.type === 'CONFIGURABLE' || product.type === 'BUNDLE')) {
           router.push(`/product/${product.slug}`);
+        } else {
+          // Show error for simple products
+          console.error('Product not available:', product);
         }
       }
     } finally {
