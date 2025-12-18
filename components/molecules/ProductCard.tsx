@@ -72,7 +72,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
         onAddToCart(product);
       } else {
         // Add to cart - this will automatically create a cart if needed
-        const cart = await addToCart(product.sku, 1);
+        const cart = await addToCartMutation(product.sku, 1);
         console.log('Added to cart:', cart);
         // Refresh the page to show updated cart
         router.refresh();
