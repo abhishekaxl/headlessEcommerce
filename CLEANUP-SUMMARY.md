@@ -21,16 +21,20 @@
   - Changed from: `getCategories()`, `getProductsByCategory()` (old client)
   - Changed to: Apollo Client queries (`GET_CATEGORIES`, `GET_PRODUCTS_BY_CATEGORY`)
 
-## Files Kept (For Reference/Backward Compatibility)
+## Files Kept (Still in Use)
+
+### Type Definitions
+- `lib/graphql/types.ts` - Type definitions (actively used by Apollo hooks and components)
+  - Contains TypeScript interfaces: Product, Category, Cart, Customer, Order, etc.
+  - Used across the codebase for type safety
+
+## Files Removed (Were Unused)
 
 ### Old GraphQL Client Files
-The following files are kept for backward compatibility but are **not actively used**:
-- `lib/graphql/queries.ts` - Old query functions (migrated to Apollo hooks)
-- `lib/graphql/mutations.ts` - Old mutation functions (migrated to Apollo hooks)
-- `lib/graphql/client.ts` - Old GraphQL client (replaced by Apollo Client)
-- `lib/graphql/types.ts` - Type definitions (still used by Apollo hooks)
-
-**Note**: These files can be removed in a future cleanup if no external dependencies require them.
+The following files were removed as they were **not being used anywhere**:
+- ✅ `lib/graphql/queries.ts` - Old query functions (replaced by Apollo hooks)
+- ✅ `lib/graphql/mutations.ts` - Old mutation functions (replaced by Apollo hooks)
+- ✅ `lib/graphql/client.ts` - Old GraphQL client (replaced by Apollo Client)
 
 ## Current Architecture
 

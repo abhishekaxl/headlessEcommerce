@@ -47,25 +47,7 @@ export function ProductPage({ slug }: { slug: string }) {
 
 ### Server Components
 
-For server-side components, you can still use the old query functions from `@/lib/graphql/queries`:
-
-```tsx
-import { getProductsByCategory } from '@/lib/graphql/queries';
-
-export default async function HomePage() {
-  const products = await getProductsByCategory('gear', { limit: 10 });
-  
-  return (
-    <div>
-      {products.items.map(product => (
-        <div key={product.id}>{product.name}</div>
-      ))}
-    </div>
-  );
-}
-```
-
-Or use Apollo Client directly in server components:
+For server-side components, use Apollo Client directly:
 
 ```tsx
 import { getApolloClient } from '@/lib/apollo/client';
@@ -151,6 +133,6 @@ const handleAdd = async () => {
 };
 ```
 
-The old functions in `lib/graphql/queries.ts` and `lib/graphql/mutations.ts` are still available for backward compatibility, but new code should use Apollo hooks.
+All GraphQL operations should use Apollo Client hooks or direct Apollo Client queries.
 
 
