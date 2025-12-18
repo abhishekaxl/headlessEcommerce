@@ -3,7 +3,8 @@
  * Nature-inspired eCommerce homepage using Atomic Design
  */
 
-import { getCategories, getProductsByCategory } from '@/lib/graphql/queries';
+import { getApolloClient } from '@/lib/apollo/client';
+import { GET_PRODUCTS_BY_CATEGORY, GET_CATEGORIES } from '@/lib/apollo/queries';
 import { HeroSection, FeaturesBar, ProductGrid } from '@/components/organisms';
 import { Text, Button } from '@/components/atoms';
 import Link from 'next/link';
@@ -19,16 +20,30 @@ export default async function HomePage() {
   let popularProducts: any[] = [];
   let categories: any[] = [];
 
+  const client = getApolloClient();
+
   try {
-    const productsResult = await getProductsByCategory('gear', { limit: 6 });
-    trendingProducts = productsResult?.items?.slice(0, 3) || [];
-    popularProducts = productsResult?.items?.slice(3, 6) || [];
+    const { data } = await client.query({
+      query: GET_PRODUCTS_BY_CATEGORY,
+      variables: {
+        categorySlug: 'gear',
+        pagination: { limit: 6 },
+      },
+      fetchPolicy: 'no-cache',
+    });
+    const productsResult = data?.productsByCategory || { items: [] };
+    trendingProducts = productsResult.items?.slice(0, 3) || [];
+    popularProducts = productsResult.items?.slice(3, 6) || [];
   } catch (error) {
     console.error('Error fetching products:', error);
   }
 
   try {
-    categories = await getCategories();
+    const { data } = await client.query({
+      query: GET_CATEGORIES,
+      fetchPolicy: 'no-cache',
+    });
+    categories = data?.categories || [];
   } catch (error) {
     console.error('Error fetching categories:', error);
   }
