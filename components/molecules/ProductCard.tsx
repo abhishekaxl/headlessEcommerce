@@ -52,15 +52,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
       if (onAddToCart) {
         onAddToCart(product);
       } else {
-        await addToCart(product.sku, 1);
-        router.push('/cart');
+        // Add to cart - this will automatically create a cart if needed
+        const cart = await addToCart(product.sku, 1);
+        console.log('Added to cart:', cart);
+        // Refresh the page to show updated cart
         router.refresh();
+        // Optionally navigate to cart page
+        // router.push('/cart');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('Failed to add to cart:', msg);
-      // If Magento requires options, redirect user to product page to select them
-      if (msg.toLowerCase().includes('choose options')) {
+      console.error('Failed to add to cart:', err);
+      
+      // Show user-friendly error message
+      alert(`Unable to add to cart: ${msg}`);
+      
+      // If Magento requires options (GROUPED, CONFIGURABLE, etc.), redirect to product page
+      if (
+        msg.toLowerCase().includes('choose options') || 
+        msg.toLowerCase().includes('specify') ||
+        msg.toLowerCase().includes('required')
+      ) {
         router.push(`/product/${product.slug}`);
       }
     } finally {

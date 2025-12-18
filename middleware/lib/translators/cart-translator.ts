@@ -195,6 +195,9 @@ export class CartTranslator extends BaseTranslator {
 
     switch (operationName) {
       case 'GetCart':
+        // For GetCart, if no cart token exists, ensureCartToken should have created one
+        // But if it's still empty, we need to handle it
+        // Magento requires a non-empty cart_id, so if empty, we'll get an error
         return {
           query: `
             query GetCart($cartId: String!) {
