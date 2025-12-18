@@ -35,17 +35,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   const imageUrl = product.images?.[0]?.url || PLACEHOLDER;
   const rating = product.rating || 4.5;
   const fullStars = Math.floor(rating);
-  const needsOptions = !!product.type && product.type !== 'SIMPLE';
+  // Check if product requires options (GROUPED, CONFIGURABLE, BUNDLE need options)
+  const needsOptions = !!product.type && 
+    (product.type === 'GROUPED' || 
+     product.type === 'CONFIGURABLE' || 
+     product.type === 'BUNDLE');
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (adding) return;
+    
+    // Check product type - GROUPED/CONFIGURABLE/BUNDLE need options
     if (needsOptions) {
+      console.log('Product requires options, redirecting to product page:', product.type);
       router.push(`/product/${product.slug}`);
       return;
     }
-    if (!product.inStock) return;
+    
+    if (!product.inStock) {
+      alert('This product is currently out of stock');
+      return;
+    }
+    
+    // Validate SKU
+    if (!product.sku) {
+      console.error('Product SKU is missing:', product);
+      alert('Unable to add product: Missing product information');
+      return;
+    }
 
     try {
       setAdding(true);
@@ -67,13 +85,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
       // Show user-friendly error message
       alert(`Unable to add to cart: ${msg}`);
       
-      // If Magento requires options (GROUPED, CONFIGURABLE, etc.), redirect to product page
+      // If Magento requires options or product not available, redirect to product page
       if (
         msg.toLowerCase().includes('choose options') || 
         msg.toLowerCase().includes('specify') ||
-        msg.toLowerCase().includes('required')
+        msg.toLowerCase().includes('required') ||
+        msg.toLowerCase().includes('not available') ||
+        msg.toLowerCase().includes('requested product')
       ) {
-        router.push(`/product/${product.slug}`);
+        // If it's a GROUPED/CONFIGURABLE/BUNDLE, redirect to product page for options
+        if (needsOptions) {
+          router.push(`/product/${product.slug}`);
+        }
       }
     } finally {
       setAdding(false);
