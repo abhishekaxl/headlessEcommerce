@@ -3,12 +3,18 @@
  * Customer account overview page (requires authentication)
  */
 
-import { getCustomer } from '@/lib/graphql/queries';
+import { getApolloClient } from '@/lib/apollo/client';
+import { GET_CUSTOMER } from '@/lib/apollo/queries';
 import { redirect } from 'next/navigation';
 import { AccountDashboard } from '@/components/account/AccountDashboard';
 
 export default async function AccountPage() {
-  const customer = await getCustomer();
+  const client = getApolloClient();
+  const { data } = await client.query({
+    query: GET_CUSTOMER,
+    fetchPolicy: 'no-cache',
+  });
+  const customer = data?.customer || null;
 
   if (!customer) {
     redirect('/login');

@@ -5,7 +5,8 @@
 
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getProduct } from '@/lib/graphql/queries';
+import { getApolloClient } from '@/lib/apollo/client';
+import { GET_PRODUCT } from '@/lib/apollo/queries';
 import { ProductImageGallery } from '@/components/catalog/ProductImageGallery';
 import { ProductPurchasePanel } from '@/components/catalog/ProductPurchasePanel';
 import styles from './product.module.css';
@@ -17,7 +18,13 @@ interface ProductPageProps {
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const product = await getProduct(params.slug);
+  const client = getApolloClient();
+  const { data } = await client.query({
+    query: GET_PRODUCT,
+    variables: { slug: params.slug },
+    fetchPolicy: 'no-cache',
+  });
+  const product = data?.product || null;
 
   if (!product) {
     return {
@@ -40,7 +47,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const product = await getProduct(params.slug);
+  const client = getApolloClient();
+  const { data } = await client.query({
+    query: GET_PRODUCT,
+    variables: { slug: params.slug },
+    fetchPolicy: 'no-cache',
+  });
+  const product = data?.product || null;
 
   if (!product) {
     notFound();

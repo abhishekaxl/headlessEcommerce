@@ -6,7 +6,7 @@
 'use client';
 
 import { CartItem } from '@/lib/graphql/types';
-import { updateCartItem, removeCartItem } from '@/lib/graphql/mutations';
+import { useUpdateCartItem, useRemoveCartItem } from '@/lib/apollo/hooks';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Image from 'next/image';
@@ -19,6 +19,8 @@ interface CartItemsProps {
 export function CartItems({ items }: CartItemsProps) {
   const router = useRouter();
   const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set());
+  const { updateCartItem } = useUpdateCartItem();
+  const { removeCartItem } = useRemoveCartItem();
 
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) {

@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/lib/graphql/types';
-import { addToCart } from '@/lib/graphql/mutations';
+import { useAddToCart } from '@/lib/apollo/hooks';
 
 interface AddToCartButtonProps {
   product: Product;
@@ -25,9 +25,9 @@ export function AddToCartButton({
   disabled = false,
   disabledMessage,
 }: AddToCartButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { addToCart, loading: isLoading } = useAddToCart();
 
   const handleAddToCart = async () => {
     if (disabled) {
@@ -39,7 +39,6 @@ export function AddToCartButton({
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
     try {
@@ -54,8 +53,6 @@ export function AddToCartButton({
       if (msg.toLowerCase().includes('choose options')) {
         setError('Please select options for this product before adding to cart.');
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 

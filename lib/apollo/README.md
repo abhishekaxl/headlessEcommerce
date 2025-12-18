@@ -152,3 +152,4 @@ const handleAdd = async () => {
 ```
 
 The old functions in `lib/graphql/queries.ts` and `lib/graphql/mutations.ts` are still available for backward compatibility, but new code should use Apollo hooks.
+

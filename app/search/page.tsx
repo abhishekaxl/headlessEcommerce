@@ -3,7 +3,8 @@
  * Search results with filters and sorting
  */
 
-import { searchProducts } from '@/lib/graphql/queries';
+import { getApolloClient } from '@/lib/apollo/client';
+import { SEARCH_PRODUCTS } from '@/lib/apollo/queries';
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 
 interface SearchPageProps {
@@ -43,7 +44,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // Parse filters
   const filters = searchParams.filters ? JSON.parse(searchParams.filters) : undefined;
 
-  const results = await searchProducts(query, { limit, cursor }, filters, sort);
+  const client = getApolloClient();
+  const { data } = await client.query({
+    query: SEARCH_PRODUCTS,
+    variables: {
+      query,
+      pagination: { limit, cursor },
+      filters,
+      sort,
+    },
+    fetchPolicy: 'no-cache',
+  });
+  const results = data?.searchProducts || { items: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, totalCount: 0 }, totalCount: 0 };
 
   return (
     <div className="container mx-auto px-4 py-8">

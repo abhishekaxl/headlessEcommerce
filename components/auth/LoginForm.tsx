@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLogin } from '@/lib/apollo/hooks';
 
 export function LoginForm() {
   const router = useRouter();
@@ -15,61 +16,27 @@ export function LoginForm() {
     password: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { login, loading } = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: `
-            mutation Login($email: String!, $password: String!) {
-              login(email: $email, password: $password) {
-                token
-                customer {
-                  id
-                  email
-                  firstName
-                  lastName
-                }
-              }
-            }
-          `,
-          variables: {
-            email: formData.email,
-            password: formData.password,
-          },
-          operationName: 'Login',
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.errors && result.errors.length > 0) {
-        setError(result.errors[0].message || 'Login failed. Please try again.');
-        return;
+      const result = await login(formData.email, formData.password);
+      
+      // Store token if available
+      if (result && typeof result === 'object' && 'token' in result) {
+        localStorage.setItem('customerToken', String(result.token));
       }
-
-      if (result.data?.login?.token) {
-        // Store token in localStorage
-        localStorage.setItem('customerToken', result.data.login.token);
-        // Redirect to account page
-        router.push('/account');
-      } else {
-        setError('Login failed. Please check your credentials.');
-      }
+      
+      // Redirect to account page
+      router.push('/account');
+      router.refresh();
     } catch (err) {
       console.error('Login error:', err);
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'An error occurred. Please try again.';
+      setError(msg);
     }
   };
 

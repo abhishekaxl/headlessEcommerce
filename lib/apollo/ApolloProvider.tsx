@@ -18,3 +18,4 @@ export function ApolloProvider({ children }: ApolloProviderProps) {
 
   return <ApolloProviderClient client={client}>{children}</ApolloProviderClient>;
 }
+

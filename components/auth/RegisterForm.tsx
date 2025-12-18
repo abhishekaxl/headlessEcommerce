@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRegister } from '@/lib/apollo/hooks';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function RegisterForm() {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { register, loading } = useRegister();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,57 +37,20 @@ export function RegisterForm() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: `
-            mutation Register($input: RegisterInput!) {
-              register(input: $input) {
-                customer {
-                  id
-                  email
-                  firstName
-                  lastName
-                }
-              }
-            }
-          `,
-          variables: {
-            input: {
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              password: formData.password,
-            },
-          },
-          operationName: 'Register',
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.errors && result.errors.length > 0) {
-        setError(result.errors[0].message || 'Registration failed. Please try again.');
-        return;
-      }
-
-      if (result.data?.register?.customer) {
-        // Redirect to login page
-        router.push('/login?registered=true');
-      } else {
-        setError('Registration failed. Please try again.');
-      }
+      await register(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName
+      );
+      
+      // Redirect to login page
+      router.push('/login?registered=true');
     } catch (err) {
       console.error('Registration error:', err);
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'An error occurred. Please try again.';
+      setError(msg);
     }
   };
 

@@ -3,7 +3,8 @@
  * Shopping cart page with items, totals, and checkout button
  */
 
-import { getCart } from '@/lib/graphql/queries';
+import { getApolloClient } from '@/lib/apollo/client';
+import { GET_CART } from '@/lib/apollo/queries';
 import { CartItems } from '@/components/cart/CartItems';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { ContinueShoppingButton } from '@/components/cart/ContinueShoppingButton';
@@ -15,7 +16,12 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function CartPage() {
-  const cart = await getCart();
+  const client = getApolloClient();
+  const { data } = await client.query({
+    query: GET_CART,
+    fetchPolicy: 'no-cache',
+  });
+  const cart = data?.cart || null;
 
   if (!cart || cart.items.length === 0) {
     return (
