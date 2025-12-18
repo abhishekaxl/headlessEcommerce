@@ -39,3 +39,4 @@ curl -s "http://localhost:3000/api/graphql" -X POST -H "Content-Type: applicatio
 3. **Cookie not sent**: Check CORS and SameSite cookie settings
 4. **Quantity error**: Ensure quantity is a number (not string)
 
+

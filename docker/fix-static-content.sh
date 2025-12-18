@@ -15,3 +15,4 @@ find var generated vendor pub/static pub/media app/etc -type d -exec chmod g+ws 
 
 echo "Done! Please refresh your browser."
 
+
