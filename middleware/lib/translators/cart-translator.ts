@@ -183,10 +183,14 @@ function normalizeCheckoutFromCart(cart: any) {
 
 export class CartTranslator extends BaseTranslator {
   translate(operationName: string, variables: Record<string, unknown>, context: RequestContext): MagentoGraphQLRequest {
-    const cartId = context.cartToken;
+    // For cart operations, ensure we have a cart token
+    // If not available, it should have been created by ensureCartToken in the route handler
+    const cartId = context.cartToken || '';
+    
     if (!cartId && operationName !== 'GetCart') {
       // Most operations need cart id; GetCart will also need it for guest carts.
       // We still proceed; Magento will error and we normalize it.
+      console.warn(`[CartTranslator] No cart token available for operation: ${operationName}`);
     }
 
     switch (operationName) {
@@ -321,7 +325,12 @@ export class CartTranslator extends BaseTranslator {
               }
             }
           `,
-          variables: { cartId, sku: input?.sku, qty: input?.quantity ?? 1, selected: selectedOptions },
+          variables: { 
+            cartId: cartId || '', 
+            sku: input?.sku || '', 
+            qty: input?.quantity ? Number(input.quantity) : 1.0, 
+            selected: selectedOptions 
+          },
           operationName: 'AddToCart',
         };
       }
