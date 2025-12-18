@@ -127,9 +127,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           inset: 0;
           background: linear-gradient(
             135deg,
-            rgba(74, 124, 89, 0.15) 0%,
-            rgba(139, 69, 19, 0.1) 50%,
-            rgba(74, 124, 89, 0.15) 100%
+            rgba(10, 10, 10, 0.85) 0%,
+            rgba(10, 10, 10, 0.75) 50%,
+            rgba(10, 10, 10, 0.85) 100%
           );
         }
 
@@ -140,6 +140,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
             radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
           animation: patternMove 20s ease-in-out infinite;
+          opacity: 0.3;
         }
 
         @keyframes patternMove {
@@ -156,6 +157,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           grid-template-columns: 1fr 400px;
           gap: 60px;
           align-items: center;
+          margin: 0 auto;
         }
 
         .hero-content {
@@ -170,15 +172,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         .badge-text {
           display: inline-block;
           padding: 8px 20px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 50px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 700;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.9);
+          color: #0a0a0a;
           backdrop-filter: blur(10px);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .hero-title {
@@ -191,6 +194,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
+          text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8),
+                       0 2px 10px rgba(0, 0, 0, 0.6),
+                       0 0 40px rgba(0, 0, 0, 0.4);
         }
 
         .hero-word {
@@ -211,10 +217,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
         .hero-subtitle {
           font-size: clamp(1.1rem, 2vw, 1.4rem);
-          color: rgba(255, 255, 255, 0.8);
+          color: #ffffff;
           margin-bottom: 40px;
           line-height: 1.6;
           max-width: 600px;
+          text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8),
+                       0 1px 5px rgba(0, 0, 0, 0.6);
+          font-weight: 400;
         }
 
         .hero-cta-group {
@@ -290,13 +299,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           color: #ffffff;
           line-height: 1;
           margin-bottom: 4px;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
         }
 
         .stat-label {
           font-size: 14px;
-          color: rgba(255, 255, 255, 0.6);
+          color: #ffffff;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+          font-weight: 500;
         }
 
         .stat-divider {
@@ -353,11 +365,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           font-weight: 600;
           color: #ffffff;
           margin-bottom: 4px;
+          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
         .feature-subtext {
           font-size: 13px;
-          color: rgba(255, 255, 255, 0.6);
+          color: #ffffff;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+          opacity: 0.9;
         }
 
         @media (max-width: 1024px) {
