@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Cart, Address } from '@/lib/graphql/types';
+import { useCart, useSetShippingAddress, useSetBillingAddress, useSetShippingMethod, useSetPaymentMethod, usePlaceOrder } from '@/lib/apollo/hooks';
 
 type CheckoutStep = 'shipping' | 'billing' | 'payment' | 'review';
 
@@ -27,11 +28,19 @@ const SHIPPING_METHODS: ShippingMethod[] = [
 export function CheckoutForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cart, setCart] = useState<Cart | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [email, setEmail] = useState<string>('');
+  
+  // Apollo hooks
+  const { cart, loading: cartLoading } = useCart();
+  const { setShippingAddress: setShippingAddressMutation, loading: shippingLoading } = useSetShippingAddress();
+  const { setBillingAddress: setBillingAddressMutation, loading: billingLoading } = useSetBillingAddress();
+  const { setShippingMethod: setShippingMethodMutation, loading: shippingMethodLoading } = useSetShippingMethod();
+  const { setPaymentMethod: setPaymentMethodMutation, loading: paymentMethodLoading } = useSetPaymentMethod();
+  const { placeOrder: placeOrderMutation, loading: placeOrderLoading } = usePlaceOrder();
+  
+  const loading = cartLoading || shippingLoading || billingLoading || shippingMethodLoading || paymentMethodLoading || placeOrderLoading;
 
   // Magento-aligned checkout data (with fallback to dummy methods)
   const [availableShippingMethods, setAvailableShippingMethods] = useState<
@@ -69,68 +78,28 @@ export function CheckoutForm() {
   const [selectedShipping, setSelectedShipping] = useState<string>('flatrate_flatrate');
   const [paymentMethod, setPaymentMethod] = useState<string>('checkmo');
 
-  // Fetch cart on mount
+  // Use cart from Apollo hook
   useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = async () => {
-    try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            query GetCheckout {
-              checkout {
-                cart {
-                  id
-                  items {
-                    id
-                    product { id sku name slug images { url alt } }
-                    quantity
-                    unitPrice { amount currency formatted }
-                    rowTotal { amount currency formatted }
-                  }
-                  itemCount
-                  subtotal { amount currency formatted }
-                  total { amount currency formatted }
-                }
-                availableShippingMethods { code name description cost { amount currency formatted } }
-                selectedShippingMethod { code name description cost { amount currency formatted } }
-                availablePaymentMethods { code title name available }
-                selectedPaymentMethod { code title name available }
-              }
-            }
-          `,
-          operationName: 'GetCheckout',
-        }),
-      });
-      const result = await response.json();
-      if (result.data?.checkout?.cart) {
-        setCart(result.data.checkout.cart);
-      }
-
-      const ship = result.data?.checkout?.availableShippingMethods || [];
-      const pay = result.data?.checkout?.availablePaymentMethods || [];
-      setAvailableShippingMethods(ship);
-      setAvailablePaymentMethods(pay);
-
-      const selectedShip = result.data?.checkout?.selectedShippingMethod?.code;
-      if (selectedShip) setSelectedShipping(selectedShip);
-
-      const selectedPay = result.data?.checkout?.selectedPaymentMethod?.code;
-      if (selectedPay) setPaymentMethod(selectedPay);
-    } catch (err) {
-      console.error('Error fetching cart:', err);
+    if (cart) {
+      setCart(cart);
+      // TODO: Fetch checkout data (shipping/payment methods) separately if needed
+      // For now, use default methods
+      setAvailableShippingMethods(SHIPPING_METHODS.map(m => ({
+        code: m.code,
+        name: m.title,
+        description: m.carrier,
+        cost: { amount: m.price, currency: 'USD', formatted: `$${m.price.toFixed(2)}` }
+      })));
+      setAvailablePaymentMethods([
+        { code: 'checkmo', title: 'Check / Money Order', name: 'Check / Money Order', available: true },
+        { code: 'banktransfer', title: 'Bank Transfer', name: 'Bank Transfer', available: true },
+      ]);
     }
-  };
+  }, [cart]);
 
   const handleShippingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
       if (!email.trim()) {
@@ -138,175 +107,60 @@ export function CheckoutForm() {
         return;
       }
 
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            mutation SetShippingAddress($input: AddressInput!, $email: String!) {
-              setShippingAddress(input: $input) {
-                checkout { cart { id } }
-                errors { message }
-              }
-            }
-          `,
-          variables: { input: shippingAddress, email },
-          operationName: 'SetShippingAddress',
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.errors?.length > 0) {
-        setError(result.errors[0].message);
-        return;
-      }
+      await setShippingAddressMutation(shippingAddress);
       
       if (sameAsShipping) {
         setBillingAddress({ ...shippingAddress });
       }
 
       // Magento flow: after shipping address, set shipping method
-      await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            mutation SetShippingMethod($shippingMethodCode: String!) {
-              setShippingMethod(shippingMethodCode: $shippingMethodCode) {
-                checkout { cart { id } }
-                errors { message }
-              }
-            }
-          `,
-          variables: { shippingMethodCode: selectedShipping },
-          operationName: 'SetShippingMethod',
-        }),
-      });
+      await setShippingMethodMutation(selectedShipping);
 
       setCurrentStep('billing');
     } catch (err) {
-      setError('Failed to save shipping address');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'Failed to save shipping address';
+      setError(msg);
     }
   };
 
   const handleBillingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
       const address = sameAsShipping ? shippingAddress : billingAddress;
-      
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            mutation SetBillingAddress($input: AddressInput!) {
-              setBillingAddress(input: $input) {
-                checkout { cart { id } }
-                errors { message }
-              }
-            }
-          `,
-          variables: { input: address },
-          operationName: 'SetBillingAddress',
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.errors?.length > 0) {
-        setError(result.errors[0].message);
-        return;
-      }
-      
+      await setBillingAddressMutation(address);
       setCurrentStep('payment');
     } catch (err) {
-      setError('Failed to save billing address');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'Failed to save billing address';
+      setError(msg);
     }
   };
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            mutation SetPaymentMethod($paymentMethodCode: String!) {
-              setPaymentMethod(paymentMethodCode: $paymentMethodCode) {
-                checkout { cart { id } }
-                errors { message }
-              }
-            }
-          `,
-          variables: { paymentMethodCode: paymentMethod },
-          operationName: 'SetPaymentMethod',
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.errors?.length > 0) {
-        setError(result.errors[0].message);
-        return;
-      }
-      
+      await setPaymentMethodMutation(paymentMethod);
       setCurrentStep('review');
     } catch (err) {
-      setError('Failed to set payment method');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'Failed to set payment method';
+      setError(msg);
     }
   };
 
   const handlePlaceOrder = async () => {
     setError('');
-    setLoading(true);
 
     try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: `
-            mutation PlaceOrder($input: PlaceOrderInput!) {
-              placeOrder(input: $input) {
-                order { orderNumber }
-                errors { message }
-              }
-            }
-          `,
-          variables: { input: { agreeToTerms: true } },
-          operationName: 'PlaceOrder',
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.errors?.length > 0) {
-        setError(result.errors[0].message);
-        return;
-      }
-      
-      if (result.data?.placeOrder?.order?.orderNumber) {
-        setOrderNumber(result.data.placeOrder.order.orderNumber);
+      const order = await placeOrderMutation(true);
+      if (order && 'orderNumber' in order) {
+        setOrderNumber(String(order.orderNumber));
       }
     } catch (err) {
-      setError('Failed to place order');
-    } finally {
-      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'Failed to place order';
+      setError(msg);
     }
   };
 
