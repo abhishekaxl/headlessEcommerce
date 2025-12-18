@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { useRouter } from 'next/navigation';
-import { addToCart } from '@/lib/graphql/mutations';
+import { useAddToCart } from '@/lib/apollo/hooks';
 
 interface Product {
   id: string;
@@ -32,6 +32,7 @@ const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const { addToCart: addToCartMutation, loading: addingToCart } = useAddToCart();
   const imageUrl = product.images?.[0]?.url || PLACEHOLDER;
   const rating = product.rating || 4.5;
   const fullStars = Math.floor(rating);
@@ -44,7 +45,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (adding) return;
+    if (adding || addingToCart) return;
     
     // Check product type - GROUPED/CONFIGURABLE/BUNDLE need options
     if (needsOptions) {

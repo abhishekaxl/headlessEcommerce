@@ -1,6 +1,9 @@
 /**
  * GraphQL Queries
  * Pre-defined queries for common operations
+ * 
+ * NOTE: This file is kept for backward compatibility.
+ * New code should use Apollo Client hooks from lib/apollo/hooks.ts
  */
 
 import { query } from './client';

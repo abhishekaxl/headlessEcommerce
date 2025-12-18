@@ -6,6 +6,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Header, Footer } from '@/components/organisms';
+import { ApolloProvider } from '@/lib/apollo/ApolloProvider';
 
 export const metadata: Metadata = {
   title: 'Urban Jungle Co. | Discover the Beauty of Nature',
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <ApolloProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+        </ApolloProvider>
       </body>
     </html>
   );
