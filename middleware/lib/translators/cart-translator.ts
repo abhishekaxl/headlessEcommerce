@@ -22,14 +22,27 @@ function money(value: number | undefined, currency: string | undefined) {
 
 function normalizeErrors(userErrors: Array<{ code?: string; message?: string }> | undefined): NormalizedError[] {
   if (!userErrors || userErrors.length === 0) return [];
-  return userErrors.map((e) => ({
-    code: e.code || 'MAGENTO_ERROR',
-    message: e.message || 'Magento error',
-    severity: ErrorSeverity.ERROR,
-    httpStatus: 400,
-    retryable: false,
-    source: ErrorSource.MAGENTO,
-  }));
+  return userErrors.map((e) => {
+    const message = e.message || 'Magento error';
+    let code = e.code || 'MAGENTO_ERROR';
+    
+    // Map specific Magento cart errors to better error codes
+    const msgLower = message.toLowerCase();
+    if (msgLower.includes('specify the quantity') || msgLower.includes('quantity')) {
+      code = 'PRODUCT_REQUIRES_OPTIONS';
+    } else if (msgLower.includes('not found') || msgLower.includes('no such')) {
+      code = 'PRODUCT_NOT_FOUND';
+    }
+    
+    return {
+      code,
+      message: message, // Keep original message
+      severity: ErrorSeverity.ERROR,
+      httpStatus: 400,
+      retryable: false,
+      source: ErrorSource.MAGENTO,
+    };
+  });
 }
 
 function normalizeMagentoCart(cart: any) {
