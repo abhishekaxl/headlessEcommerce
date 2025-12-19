@@ -27,7 +27,6 @@ export function Footer() {
           <nav className="footer-nav">
             <Link href="/">Home</Link>
             <Link href="/shop">Shop</Link>
-            <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
           </nav>
           <p className="copyright">

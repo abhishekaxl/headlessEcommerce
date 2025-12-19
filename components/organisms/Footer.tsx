@@ -58,7 +58,6 @@ export const Footer: React.FC = () => {
             <div className="footer-col">
               <h4 className="footer-title">Company</h4>
               <ul className="footer-links">
-                <li><Link href="/about">About Us</Link></li>
                 <li><Link href="/careers">Careers</Link></li>
                 <li><Link href="/press">Press</Link></li>
                 <li><Link href="/privacy">Privacy Policy</Link></li>

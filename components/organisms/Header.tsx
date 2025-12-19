@@ -215,7 +215,6 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            <Link href="/about" className="nav-link">About</Link>
             <Link href="/contact" className="nav-link">Contact</Link>
           </nav>
 
@@ -284,7 +283,6 @@ export const Header: React.FC = () => {
                 </div>
               )}
             </div>
-            <Link href="/about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>About</Link>
             <Link href="/contact" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
           </nav>
         )}

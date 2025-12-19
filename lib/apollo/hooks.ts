@@ -3,7 +3,7 @@
  * React hooks for GraphQL operations using Apollo Client
  */
 
-import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client/react';
 import {
   GET_PRODUCT,
   GET_PRODUCTS_BY_CATEGORY,

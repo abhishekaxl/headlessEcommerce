@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['localhost', 'magento-instance.com'],
     remotePatterns: [
       {
         protocol: 'http',
@@ -17,6 +16,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'magento-instance.com',
       },
     ],
     unoptimized: false,

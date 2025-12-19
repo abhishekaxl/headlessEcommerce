@@ -40,12 +40,7 @@ next-env.d.ts
 *.swo
 *~
 
-# Magento 2 (exclude vendor and generated files, keep docker config)
-magento2/vendor/
-magento2/var/
-magento2/generated/
-magento2/pub/static/
-magento2/pub/media/
+# Logs
 *.log
 
 # Docker
